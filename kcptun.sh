@@ -1,3 +1,4 @@
+#!/bin/bash
 apt-get install wget unzip -y
 mkdir /opt/kcptun
 cd /opt/kcptun
