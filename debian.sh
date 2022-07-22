@@ -138,7 +138,7 @@ e_success() {
     green "==========|| ✔ $@ ||=========="
 }
 e_error() {
-    red "==========|| ✖ $@ ||=========="
+    dark_red "==========|| ✖ $@ ||=========="
 }
 e_warning() {
     dark_yellow $(e_arrow "$@")
@@ -260,7 +260,7 @@ EOF
     e_warning 更新系统
     apt update
     e_warning 安装常用库
-    apt install sudo curl wget unzip zip jq -y
+    apt install sudo curl wget unzip zip jq lrzsz -y
 }
 
 set_ssh(){
@@ -290,7 +290,7 @@ set_ntp(){
 
 
 app_docker(){
-    e_warning ==========开始安装Docker
+    e_warning 开始安装Docker
     curl -fsSL https://get.docker.com | bash -s docker
     e_warning 开始安装Docker-compose
     compose_ver=$(wget -qO- -t1 -T2 "https://api.github.com/repos/docker/compose/releases/latest" | jq -r '.tag_name')
@@ -319,10 +319,10 @@ app_zsh_diy(){
     echo "source ~/.profile" >>~/.zshrc
     source ~/.zshrc
 }
-
-#system_need
 e_error 开始执行脚本
 for i in "$@"; do
     $i
 done
 e_error 脚本执行完毕
+
+
