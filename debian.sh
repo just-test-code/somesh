@@ -307,9 +307,7 @@ app_fd(){
 }
 app_zsh(){
     apt install zsh git fonts-firacode -y
-    sh -c "$(curl -fsSL https://raw.github.com/robbyrussell/oh-my-zsh/master/tools/install.sh)"
-}
-app_zsh_diy(){
+    sh -c "$(curl -fsSL https://raw.github.com/robbyrussell/oh-my-zsh/master/tools/install.sh)" "" --unattended
     cp ~/.oh-my-zsh/templates/zshrc.zsh-template ~/.zshrc
     wget http://raw.github.com/caiogondim/bullet-train-oh-my-zsh-theme/master/bullet-train.zsh-theme -O ~/.oh-my-zsh/themes/bullet-train.zsh-theme
     sudo sed -i "s/ZSH_THEME=.*/ZSH_THEME='bullet-train'/" ~/.zshrc
@@ -317,7 +315,9 @@ app_zsh_diy(){
     git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting
     sudo sed -i "s/plugins=.*/plugins=(extract zsh-syntax-highlighting zsh-autosuggestions git)/" ~/.zshrc
     echo "source ~/.profile" >>~/.zshrc
-    source ~/.zshrc
+    chsh -s /bin/zsh
+    zsh
+    #source ~/.zshrc
 }
 e_error 开始执行脚本
 for i in "$@"; do
