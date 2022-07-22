@@ -307,7 +307,7 @@ app_fd(){
 }
 app_zsh(){
     apt install zsh git fonts-firacode -y
-    sh -c "$(curl -fsSL https://raw.github.com/robbyrussell/oh-my-zsh/master/tools/install.sh)" && echo testqwe
+    sh -c "$(curl -fsSL https://raw.github.com/robbyrussell/oh-my-zsh/master/tools/install.sh)"
 }
 app_zsh_diy(){
     cp ~/.oh-my-zsh/templates/zshrc.zsh-template ~/.zshrc
