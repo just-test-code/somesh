@@ -315,8 +315,7 @@ app_zsh(){
     git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting
     sudo sed -i "s/plugins=.*/plugins=(extract zsh-syntax-highlighting zsh-autosuggestions git)/" ~/.zshrc
     echo "source ~/.profile" >>~/.zshrc
-    chsh -s /bin/zsh
-    zsh
+    chsh -s /bin/zsh && /bin/zsh
     #source ~/.zshrc
 }
 e_error 开始执行脚本
