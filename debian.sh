@@ -306,7 +306,9 @@ app_fd(){
     e_success fd安装完毕
 }
 app_zsh(){
+    e_warning 开始安装ZSH
     apt install zsh git fonts-firacode -y
+    e_warning 开始安装oh-my-zsh
     sh -c "$(curl -fsSL https://raw.github.com/robbyrussell/oh-my-zsh/master/tools/install.sh)" "" --unattended
     cp ~/.oh-my-zsh/templates/zshrc.zsh-template ~/.zshrc
     wget http://raw.github.com/caiogondim/bullet-train-oh-my-zsh-theme/master/bullet-train.zsh-theme -O ~/.oh-my-zsh/themes/bullet-train.zsh-theme
@@ -315,7 +317,9 @@ app_zsh(){
     git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting
     sudo sed -i "s/plugins=.*/plugins=(extract zsh-syntax-highlighting zsh-autosuggestions git)/" ~/.zshrc
     echo "source ~/.profile" >>~/.zshrc
-    chsh -s /bin/zsh && /bin/zsh
+    e_warning 设置zsh为默认shell
+    chsh -s /bin/zsh
+    e_success "请手动执行 zsh 和 source ~/.zshrc  "
     #source ~/.zshrc
 }
 e_error 开始执行脚本
@@ -323,5 +327,4 @@ for i in "$@"; do
     $i
 done
 e_error 脚本执行完毕
-
 
