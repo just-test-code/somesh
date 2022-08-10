@@ -238,7 +238,7 @@ set_swapfile() {
         sudo mkswap /swapfile
         sudo swapon /swapfile
         sudo chmod 600 /swapfile
-        sudo [ -z "`grep swapfile /etc/fstab`" ] && echo '/swapfile    swap    swap    defaults    0 0' >> /etc/fstab
+        sudo [ -z "`grep swapfile /etc/fstab`" ] && sudo echo '/swapfile    swap    swap    defaults    0 0' >> /etc/fstab
         e_success 虚拟内存设置完毕 $MemCount
     fi
     e_warning 虚拟内存无需配置
@@ -301,7 +301,7 @@ app_docker(){
 app_fd(){
     e_warning 开始安装fd
     wget https://github.com/sharkdp/fd/releases/download/v$fd_ver/fd_${fd_ver}_amd64.deb
-    dpkg -i fd_${fd_ver}_amd64.deb
+    sudo dpkg -i fd_${fd_ver}_amd64.deb
     rm fd_${fd_ver}_amd64.deb
     e_success fd安装完毕
 }
@@ -321,6 +321,14 @@ app_zsh(){
     sudo chsh -s /bin/zsh
     e_success "请手动执行 zsh 和 source ~/.zshrc  "
     #source ~/.zshrc
+}
+app_netclient(){
+    curl -sL 'https://apt.netmaker.org/gpg.key' | sudo tee /etc/apt/trusted.gpg.d/netclient.asc
+    curl -sL 'https://apt.netmaker.org/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/netclient.list
+    sudo apt update
+    sudo apt install netclient -y
+    sudo systemctl enable netclient
+    sudo systemctl start netclient
 }
 e_error 开始执行脚本
 for i in "$@"; do
