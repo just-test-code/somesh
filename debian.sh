@@ -235,10 +235,10 @@ set_swapfile() {
             MemCount=2048
         fi
         dd if=/dev/zero of=/swapfile count=$MemCount bs=1M
-        mkswap /swapfile
-        swapon /swapfile
-        chmod 600 /swapfile
-        [ -z "`grep swapfile /etc/fstab`" ] && echo '/swapfile    swap    swap    defaults    0 0' >> /etc/fstab
+        sudo mkswap /swapfile
+        sudo swapon /swapfile
+        sudo chmod 600 /swapfile
+        sudo [ -z "`grep swapfile /etc/fstab`" ] && echo '/swapfile    swap    swap    defaults    0 0' >> /etc/fstab
         e_success 虚拟内存设置完毕 $MemCount
     fi
     e_warning 虚拟内存无需配置
@@ -247,7 +247,7 @@ set_swapfile() {
 
 set_apt(){
     e_warning 修改更新源
-    cat>"/etc/apt/sources.list"<<EOF
+    sudo cat>"/etc/apt/sources.list"<<EOF
 deb http://deb.debian.org/debian bullseye main
 deb-src http://deb.debian.org/debian bullseye main
 deb http://security.debian.org/debian-security bullseye-security main
@@ -258,9 +258,9 @@ deb http://deb.debian.org/debian bullseye-backports main
 deb-src http://deb.debian.org/debian bullseye-backports main
 EOF
     e_warning 更新系统
-    apt update
+    sudo apt update
     e_warning 安装常用库
-    apt install sudo curl wget unzip zip jq lrzsz -y
+    sudo apt install sudo curl wget unzip zip jq lrzsz -y
 }
 
 set_ssh(){
@@ -281,10 +281,10 @@ set_ssh(){
 
 set_ntp(){
     e_warning 安装时间同步ntp
-    apt install ntp -y
-    systemctl enable ntp
+    sudo apt install ntp -y
+    sudo systemctl enable ntp
     sudo service ntp restart
-    ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
+    sudo ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
     date
 }
 
@@ -307,15 +307,15 @@ app_fd(){
 }
 app_zsh(){
     e_warning 开始安装ZSH
-    apt install zsh git fonts-firacode -y
+    sudo apt install zsh git fonts-firacode -y
     e_warning 开始安装oh-my-zsh
     sh -c "$(curl -fsSL https://raw.github.com/robbyrussell/oh-my-zsh/master/tools/install.sh)" "" --unattended
     cp ~/.oh-my-zsh/templates/zshrc.zsh-template ~/.zshrc
     wget http://raw.github.com/caiogondim/bullet-train-oh-my-zsh-theme/master/bullet-train.zsh-theme -O ~/.oh-my-zsh/themes/bullet-train.zsh-theme
-    sudo sed -i "s/ZSH_THEME=.*/ZSH_THEME='bullet-train'/" ~/.zshrc
+    sed -i "s/ZSH_THEME=.*/ZSH_THEME='bullet-train'/" ~/.zshrc
     git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions
     git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting
-    sudo sed -i "s/plugins=.*/plugins=(extract zsh-syntax-highlighting zsh-autosuggestions git)/" ~/.zshrc
+    sed -i "s/plugins=.*/plugins=(extract zsh-syntax-highlighting zsh-autosuggestions git)/" ~/.zshrc
     echo "source ~/.profile" >>~/.zshrc
     e_warning 设置zsh为默认shell
     chsh -s /bin/zsh
