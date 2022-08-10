@@ -318,7 +318,7 @@ app_zsh(){
     sed -i "s/plugins=.*/plugins=(extract zsh-syntax-highlighting zsh-autosuggestions git)/" ~/.zshrc
     echo "source ~/.profile" >>~/.zshrc
     e_warning 设置zsh为默认shell
-    chsh -s /bin/zsh
+    sudo chsh -s /bin/zsh
     e_success "请手动执行 zsh 和 source ~/.zshrc  "
     #source ~/.zshrc
 }
