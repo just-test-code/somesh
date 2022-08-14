@@ -247,6 +247,8 @@ set_swapfile() {
 
 set_apt(){
     e_warning 修改更新源
+    apt update
+    apt install sudo -y
     sudo cat>"/etc/apt/sources.list"<<EOF
 deb http://deb.debian.org/debian bullseye main
 deb-src http://deb.debian.org/debian bullseye main
@@ -260,7 +262,7 @@ EOF
     e_warning 更新系统
     sudo apt update
     e_warning 安装常用库
-    sudo apt install sudo curl wget unzip zip jq lrzsz -y
+    sudo apt install curl wget unzip zip jq lrzsz -y
 }
 
 set_ssh(){
