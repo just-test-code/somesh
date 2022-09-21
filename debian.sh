@@ -290,6 +290,15 @@ set_ntp(){
     date
 }
 
+set_clean(){
+    apt-get -y update && \
+    apt-get -y upgrade && \
+    apt-get dist-upgrade -y && \
+    apt-get -y purge apache2-* bind9-* xinetd samba-* nscd-* portmap sendmail-* sasl2-bin && \
+    apt-get -y purge lynx memtester unixodbc python-* odbcinst-* tcpdump ttf-* && \
+    apt-get -y autoremove && \
+    apt-get clean
+}
 
 app_docker(){
     e_warning 开始安装Docker
@@ -331,6 +340,19 @@ app_netclient(){
     sudo apt install netclient -y
     sudo systemctl enable netclient
     sudo systemctl start netclient
+}
+app_kcptun(){
+    e_warning 开始安装kcptun
+    case $(uname -m) in
+        x86_64)  _cpu=amd64;;
+        aarch64) _cpu=arm64;;
+    esac
+    mkdir /opt/kcptun
+    curl -s https://api.github.com/repos/xtaci/kcptun/releases/latest | grep -woi "https.*$(uname).*${_cpu}.*gz" | xargs wget -O kcptun.tar.gz
+    tar xvf kcptun.tar.gz -C /opt/kcptun && rm kcptun.tar.gz
+    mv /opt/kcptun/server* /opt/kcptun/kcptun-server
+    mv /opt/kcptun/client* /opt/kcptun/kcptun-client
+    e_success kcptun安装完毕
 }
 e_error 开始执行脚本
 for i in "$@"; do
