@@ -262,7 +262,7 @@ EOF
     e_warning 更新系统
     sudo apt update
     e_warning 安装常用库
-    sudo apt install curl wget unzip zip jq lrzsz -y
+    sudo apt install curl wget unzip zip jq lrzsz tmux -y
 }
 
 set_ssh(){
@@ -307,6 +307,7 @@ app_docker(){
     compose_ver=$(wget -qO- -t1 -T2 "https://api.github.com/repos/docker/compose/releases/latest" | jq -r '.tag_name')
     sudo curl -L "https://github.com/docker/compose/releases/download/$compose_ver/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
     sudo chmod +x /usr/local/bin/docker-compose
+    sudo ln -s /usr/local/bin/docker-compose /usr/bin/dc
     e_success Docker安装完毕
 }
 app_fd(){
