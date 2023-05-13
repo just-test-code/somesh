@@ -2,7 +2,7 @@
 
 #日志类开始
 
-decorate(){
+decorate() {
     echo -e $@
 }
 
@@ -10,27 +10,27 @@ gray() {
     echo -e "\033[90m$@\033[39m"
 }
 
-red(){
+red() {
     echo -e "\033[91m$@\033[39m"
 }
 
-green(){
+green() {
     echo -e "\033[92m$@\033[39m"
 }
 
-yellow(){
+yellow() {
     echo -e "\033[93m$@\033[39m"
 }
 
-blue(){
+blue() {
     echo -e "\033[94m$@\033[39m"
 }
 
-magenta(){
+magenta() {
     echo -e "\033[95m$@\033[39m"
 }
 
-cyan(){
+cyan() {
     echo -e "\033[96m$@\033[39m"
 }
 
@@ -42,27 +42,27 @@ black() {
     echo -e "\033[30m$@\033[39m"
 }
 
-dark_red(){
+dark_red() {
     echo -e "\033[31m$@\033[39m"
 }
 
-dark_green(){
+dark_green() {
     echo -e "\033[32m$@\033[39m"
 }
 
-dark_yellow(){
+dark_yellow() {
     echo -e "\033[33m$@\033[39m"
 }
 
-dark_blue(){
+dark_blue() {
     echo -e "\033[34m$@\033[39m"
 }
 
-dark_magenta(){
+dark_magenta() {
     echo -e "\033[35m$@\033[39m"
 }
 
-dark_cyan(){
+dark_cyan() {
     echo -e "\033[36m$@\033[39m"
 }
 
@@ -107,7 +107,6 @@ reset=$(tput sgr0)
 red=$(tput setaf 1)
 green=$(tput setaf 76)
 tan=$(tput setaf 3)
-
 
 Bold="\033[1m"
 Dim="\033[2m"
@@ -207,11 +206,11 @@ e_reset_step() {
 # cat file.txt | indent 1 4
 
 indent() {
-  local indentCount=1
-  local indentWidth=2
-  if [[ -n "$1" ]]; then indentCount=$1; fi
-  if [[ -n "$2" ]]; then indentWidth=$2; fi
-  pr -to $((indentCount * indentWidth))
+    local indentCount=1
+    local indentWidth=2
+    if [[ -n "$1" ]]; then indentCount=$1; fi
+    if [[ -n "$2" ]]; then indentWidth=$2; fi
+    pr -to $((indentCount * indentWidth))
 }
 
 eecho() {
@@ -226,8 +225,8 @@ ssh_cert="ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAr0xdTps65qvyHbwXks6Ik219y9nOa6oono
 
 set_swapfile() {
     e_warning 配置虚拟内存
-    Mem=`free -m | awk '/Mem:/{print $2}'`
-    Swap=`free -m | awk '/Swap:/{print $2}'`
+    Mem=$(free -m | awk '/Mem:/{print $2}')
+    Swap=$(free -m | awk '/Swap:/{print $2}')
     if [ "$Swap" == '0' ]; then
         if [ $Mem -le 1024 ]; then
             MemCount=1024
@@ -238,18 +237,15 @@ set_swapfile() {
         sudo mkswap /swapfile
         sudo swapon /swapfile
         sudo chmod 600 /swapfile
-        sudo [ -z "`grep swapfile /etc/fstab`" ] && sudo echo '/swapfile    swap    swap    defaults    0 0' >> /etc/fstab
+        sudo [ -z "$(grep swapfile /etc/fstab)" ] && sudo echo '/swapfile    swap    swap    defaults    0 0' >>/etc/fstab
         e_success 虚拟内存设置完毕 $MemCount
     fi
     e_warning 虚拟内存无需配置
-    
+
 }
 
-set_apt(){
-    e_warning 修改更新源
-    apt update
-    apt install sudo -y
-    sudo cat>"/etc/apt/sources.list"<<EOF
+set_apt_source() {
+    sudo cat >"/etc/apt/sources.list" <<EOF
 deb http://deb.debian.org/debian bullseye main
 deb-src http://deb.debian.org/debian bullseye main
 deb http://security.debian.org/debian-security bullseye-security main
@@ -259,19 +255,26 @@ deb-src http://deb.debian.org/debian bullseye-updates main
 deb http://deb.debian.org/debian bullseye-backports main
 deb-src http://deb.debian.org/debian bullseye-backports main
 EOF
+    sudo apt update
+}
+
+set_init() {
+    e_warning 初始化系统
+    apt update
+    apt install sudo -y
     e_warning 更新系统
     sudo apt update
     e_warning 安装常用库
     sudo apt install curl wget unzip zip jq lrzsz tmux -y
 }
 
-set_ssh(){
+set_ssh() {
     e_warning "配置密钥登陆并禁用密码登录"
     mkdir /root/.ssh
-    sudo echo $ssh_cert | cat > /root/.ssh/authorized_keys
+    sudo echo $ssh_cert | cat >/root/.ssh/authorized_keys
     sudo chmod 600 /root/.ssh/authorized_keys
     sudo sed -i '/Protocol/d' /etc/ssh/sshd_config
-    sudo echo "Protocol 2" >> /etc/ssh/sshd_config
+    sudo echo "Protocol 2" >>/etc/ssh/sshd_config
     sudo sed -i "s/.*RSAAuthentication.*/RSAAuthentication yes/g" /etc/ssh/sshd_config
     sudo sed -i "s/.*PubkeyAuthentication.*/PubkeyAuthentication yes/g" /etc/ssh/sshd_config
     sudo sed -i "s/.*PasswordAuthentication.*/PasswordAuthentication no/g" /etc/ssh/sshd_config
@@ -281,7 +284,7 @@ set_ssh(){
     e_success "密钥配置完成"
 }
 
-set_ntp(){
+set_ntp() {
     e_warning 安装时间同步ntp
     sudo apt install ntp -y
     sudo systemctl enable ntp
@@ -290,17 +293,27 @@ set_ntp(){
     date
 }
 
-set_clean(){
-    apt-get -y update && \
-    apt-get -y upgrade && \
-    apt-get dist-upgrade -y && \
-    apt-get -y purge apache2-* bind9-* xinetd samba-* nscd-* portmap sendmail-* sasl2-bin && \
-    apt-get -y purge lynx memtester unixodbc python-* odbcinst-* tcpdump ttf-* && \
-    apt-get -y autoremove && \
-    apt-get clean
+set_clean() {
+    e_warning 一键清理垃圾
+    sudo apt autoremove --purge
+    sudo apt clean
+    sudo apt autoclean
+    sudo apt remove --purge $(dpkg -l | awk '/^rc/ {print $2}')
+    sudo journalctl --rotate
+    sudo journalctl --vacuum-time=1s
+    sudo journalctl --vacuum-size=50M
+    sudo apt remove --purge $(dpkg -l | awk '/^ii linux-(image|headers)-[^ ]+/{print $2}' | grep -v $(uname -r | sed 's/-.*//') | xargs)
 }
 
-app_docker(){
+set_update() {
+    e_warning 一键纯净更新
+    sudo apt update -y
+    sudo apt full-upgrade -y
+    sudo apt autoremove -y
+    sudo apt autoclean -y
+}
+
+app_docker() {
     e_warning 开始安装Docker
     curl -fsSL https://get.docker.com | bash -s docker
     e_warning 开始安装Docker-compose
@@ -310,14 +323,14 @@ app_docker(){
     sudo ln -s /usr/local/bin/docker-compose /usr/bin/dc
     e_success Docker安装完毕
 }
-app_fd(){
+app_fd() {
     e_warning 开始安装fd
     wget https://github.com/sharkdp/fd/releases/download/v$fd_ver/fd_${fd_ver}_amd64.deb
     sudo dpkg -i fd_${fd_ver}_amd64.deb
     rm fd_${fd_ver}_amd64.deb
     e_success fd安装完毕
 }
-app_zsh(){
+app_zsh() {
     e_warning 开始安装ZSH
     sudo apt install zsh git fonts-firacode -y
     e_warning 开始安装oh-my-zsh
@@ -334,7 +347,7 @@ app_zsh(){
     e_success "请手动执行 zsh 和 source ~/.zshrc  "
     #source ~/.zshrc
 }
-app_netclient(){
+app_netclient() {
     curl -sL 'https://apt.netmaker.org/gpg.key' | sudo tee /etc/apt/trusted.gpg.d/netclient.asc
     curl -sL 'https://apt.netmaker.org/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/netclient.list
     sudo apt update
@@ -342,11 +355,11 @@ app_netclient(){
     sudo systemctl enable netclient
     sudo systemctl start netclient
 }
-app_kcptun(){
+app_kcptun() {
     e_warning 开始安装kcptun
     case $(uname -m) in
-        x86_64)  _cpu=amd64;;
-        aarch64) _cpu=arm64;;
+    x86_64) _cpu=amd64 ;;
+    aarch64) _cpu=arm64 ;;
     esac
     mkdir /opt/kcptun
     curl -s https://api.github.com/repos/xtaci/kcptun/releases/latest | grep -woi "https.*$(uname).*${_cpu}.*gz" | xargs wget -O kcptun.tar.gz
@@ -360,4 +373,3 @@ for i in "$@"; do
     $i
 done
 e_error 脚本执行完毕
-
