@@ -368,6 +368,25 @@ app_kcptun() {
     mv /opt/kcptun/client* /opt/kcptun/kcptun-client
     e_success kcptun安装完毕
 }
+clean_log() {
+    echo >/var/log/wtmp
+    echo >/var/log/btmp
+    echo >/var/log/lastlog
+    echo >/var/log/secure
+    echo >/var/log/messages
+    echo >/var/log/syslog
+    echo >/var/log/xferlog
+    echo >/var/log/auth.log
+    echo >/var/log/user.log
+    cat /dev/null >/var/adm/sylog
+    cat /dev/null >/var/log/maillog
+    cat /dev/null >/var/log/openwebmail.log
+    cat /dev/null >/var/log/mail.info
+    echo >/var/run/utmp
+    echo >~/.bash_history
+    history -c
+    echo >.bash_history
+}
 e_error 开始执行脚本
 for i in "$@"; do
     $i
