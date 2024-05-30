@@ -220,8 +220,8 @@ eecho() {
 #日志类结束
 
 #全局变量
-fd_ver='8.4.0'
-ssh_cert="ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAr0xdTps65qvyHbwXks6Ik219y9nOa6oono1YQR20Gb03Gh8OOMLM/bijGsyNlI0Lh5ccwEexUGK1IvpLGqAty14wFPjvgYc5x6xOURuvuxSEgmKxNHsX97smIWvKqt8n6kOyjLSaGnbMT8KpNCTWy7IblhiJc8TvDh3LrXMMsCazX3T7n/nF4B1trQSESxsePir2UUrovm0LT2Z4F1nnFRMyEhOvie3EMqxG8XA/n463spHHMrtBpfCh+zcMijS7vt7W5fhFn+7GIngNfjWXHqkmEOXqzJ/WuNzDxbLMXUf5vsyovnHTMvaMpfjW+dzhHIWyBlRuxO6E7f/XAwLzmQ== root"
+fd_ver='10.1.0'
+
 
 set_swapfile() {
     e_warning 配置虚拟内存
@@ -270,7 +270,11 @@ set_init() {
 
 set_ssh() {
     e_warning "配置密钥登陆并禁用密码登录"
-    mkdir /root/.ssh
+    if [ -z "${ssh_cert}" ]; then
+        echo "变量 ssh_cert 不存在，停止执行"
+        exit 1
+    fi
+    [! -d "/root/.ssh" ] && mkdir "/root/.ssh"
     sudo echo $ssh_cert | cat >/root/.ssh/authorized_keys
     sudo chmod 600 /root/.ssh/authorized_keys
     sudo sed -i '/Protocol/d' /etc/ssh/sshd_config
@@ -316,11 +320,11 @@ set_update() {
 app_docker() {
     e_warning 开始安装Docker
     curl -fsSL https://get.docker.com | bash -s docker
-    e_warning 开始安装Docker-compose
-    compose_ver=$(wget -qO- -t1 -T2 "https://api.github.com/repos/docker/compose/releases/latest" | jq -r '.tag_name')
-    sudo curl -L "https://github.com/docker/compose/releases/download/$compose_ver/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-    sudo chmod +x /usr/local/bin/docker-compose
-    sudo ln -s /usr/local/bin/docker-compose /usr/bin/dc
+    # e_warning 开始安装Docker-compose
+    # compose_ver=$(wget -qO- -t1 -T2 "https://api.github.com/repos/docker/compose/releases/latest" | jq -r '.tag_name')
+    # sudo curl -L "https://github.com/docker/compose/releases/download/$compose_ver/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+    # sudo chmod +x /usr/local/bin/docker-compose
+    # sudo ln -s /usr/local/bin/docker-compose /usr/bin/dc
     e_success Docker安装完毕
 }
 app_fd() {
@@ -387,8 +391,8 @@ clean_log() {
     history -c
     echo >.bash_history
 }
-e_error 开始执行脚本
+e_header 开始执行脚本
 for i in "$@"; do
     $i
 done
-e_error 脚本执行完毕
+e_header 脚本执行完毕
