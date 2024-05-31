@@ -234,10 +234,10 @@ set_swapfile() {
             MemCount=2048
         fi
         dd if=/dev/zero of=/swapfile count=$MemCount bs=1M
-        sudo mkswap /swapfile
-        sudo swapon /swapfile
-        sudo chmod 600 /swapfile
-        sudo [ -z "$(grep swapfile /etc/fstab)" ] && sudo echo '/swapfile    swap    swap    defaults    0 0' >>/etc/fstab
+        mkswap /swapfile
+        swapon /swapfile
+        chmod 600 /swapfile
+        [ -z "$(grep swapfile /etc/fstab)" ] && echo '/swapfile    swap    swap    defaults    0 0' >>/etc/fstab
         e_success 虚拟内存设置完毕 $MemCount
     fi
     e_warning 虚拟内存无需配置
@@ -245,7 +245,7 @@ set_swapfile() {
 }
 
 set_apt_source() {
-    sudo cat >"/etc/apt/sources.list" <<EOF
+    cat >"/etc/apt/sources.list" <<EOF
 deb http://deb.debian.org/debian bullseye main
 deb-src http://deb.debian.org/debian bullseye main
 deb http://security.debian.org/debian-security bullseye-security main
@@ -255,17 +255,17 @@ deb-src http://deb.debian.org/debian bullseye-updates main
 deb http://deb.debian.org/debian bullseye-backports main
 deb-src http://deb.debian.org/debian bullseye-backports main
 EOF
-    sudo apt update
+    apt update
 }
 
 set_init() {
     e_warning 初始化系统
     apt update
-    apt install sudo -y
+    apt install -y
     e_warning 更新系统
-    sudo apt update
+    apt update
     e_warning 安装常用库
-    sudo apt install curl wget unzip zip jq lrzsz tmux -y
+    apt install curl wget unzip zip jq lrzsz tmux -y
 }
 
 set_ssh() {
@@ -275,46 +275,46 @@ set_ssh() {
         exit 1
     fi
     [! -d "/root/.ssh" ] && mkdir "/root/.ssh"
-    sudo echo $ssh_cert | cat >/root/.ssh/authorized_keys
-    sudo chmod 600 /root/.ssh/authorized_keys
-    sudo sed -i '/Protocol/d' /etc/ssh/sshd_config
-    sudo echo "Protocol 2" >>/etc/ssh/sshd_config
-    sudo sed -i "s/.*RSAAuthentication.*/RSAAuthentication yes/g" /etc/ssh/sshd_config
-    sudo sed -i "s/.*PubkeyAuthentication.*/PubkeyAuthentication yes/g" /etc/ssh/sshd_config
-    sudo sed -i "s/.*PasswordAuthentication.*/PasswordAuthentication no/g" /etc/ssh/sshd_config
-    sudo sed -i "s/.*AuthorizedKeysFile.*/AuthorizedKeysFile\t\.ssh\/authorized_keys/g" /etc/ssh/sshd_config
-    sudo sed -i "s/.*PermitRootLogin.*/PermitRootLogin yes/g" /etc/ssh/sshd_config
-    sudo service sshd restart
+    echo $ssh_cert | cat >/root/.ssh/authorized_keys
+    chmod 600 /root/.ssh/authorized_keys
+    sed -i '/Protocol/d' /etc/ssh/sshd_config
+    echo "Protocol 2" >>/etc/ssh/sshd_config
+    sed -i "s/.*RSAAuthentication.*/RSAAuthentication yes/g" /etc/ssh/sshd_config
+    sed -i "s/.*PubkeyAuthentication.*/PubkeyAuthentication yes/g" /etc/ssh/sshd_config
+    sed -i "s/.*PasswordAuthentication.*/PasswordAuthentication no/g" /etc/ssh/sshd_config
+    sed -i "s/.*AuthorizedKeysFile.*/AuthorizedKeysFile\t\.ssh\/authorized_keys/g" /etc/ssh/sshd_config
+    sed -i "s/.*PermitRootLogin.*/PermitRootLogin yes/g" /etc/ssh/sshd_config
+    service sshd restart
     e_success "密钥配置完成"
 }
 
 set_ntp() {
     e_warning 安装时间同步ntp
-    sudo apt install ntp -y
-    sudo systemctl enable ntp
-    sudo service ntp restart
-    sudo ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
+    apt install ntp -y
+    systemctl enable ntp
+    service ntp restart
+    ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
     date
 }
 
 set_clean() {
     e_warning 一键清理垃圾
-    sudo apt autoremove --purge
-    sudo apt clean
-    sudo apt autoclean
-    sudo apt remove --purge $(dpkg -l | awk '/^rc/ {print $2}')
-    sudo journalctl --rotate
-    sudo journalctl --vacuum-time=1s
-    sudo journalctl --vacuum-size=50M
-    sudo apt remove --purge $(dpkg -l | awk '/^ii linux-(image|headers)-[^ ]+/{print $2}' | grep -v $(uname -r | sed 's/-.*//') | xargs)
+    apt autoremove --purge
+    apt clean
+    apt autoclean
+    apt remove --purge $(dpkg -l | awk '/^rc/ {print $2}')
+    journalctl --rotate
+    journalctl --vacuum-time=1s
+    journalctl --vacuum-size=50M
+    apt remove --purge $(dpkg -l | awk '/^ii linux-(image|headers)-[^ ]+/{print $2}' | grep -v $(uname -r | sed 's/-.*//') | xargs)
 }
 
 set_update() {
     e_warning 一键纯净更新
-    sudo apt update -y
-    sudo apt full-upgrade -y
-    sudo apt autoremove -y
-    sudo apt autoclean -y
+    apt update -y
+    apt full-upgrade -y
+    apt autoremove -y
+    apt autoclean -y
 }
 
 app_docker() {
@@ -322,21 +322,15 @@ app_docker() {
     curl -fsSL https://get.docker.com | bash -s docker
     # e_warning 开始安装Docker-compose
     # compose_ver=$(wget -qO- -t1 -T2 "https://api.github.com/repos/docker/compose/releases/latest" | jq -r '.tag_name')
-    # sudo curl -L "https://github.com/docker/compose/releases/download/$compose_ver/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-    # sudo chmod +x /usr/local/bin/docker-compose
-    # sudo ln -s /usr/local/bin/docker-compose /usr/bin/dc
+    # curl -L "https://github.com/docker/compose/releases/download/$compose_ver/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+    # chmod +x /usr/local/bin/docker-compose
+    # ln -s /usr/local/bin/docker-compose /usr/bin/dc
     e_success Docker安装完毕
 }
-app_fd() {
-    e_warning 开始安装fd
-    wget https://github.com/sharkdp/fd/releases/download/v$fd_ver/fd_${fd_ver}_amd64.deb
-    sudo dpkg -i fd_${fd_ver}_amd64.deb
-    rm fd_${fd_ver}_amd64.deb
-    e_success fd安装完毕
-}
+
 app_zsh() {
     e_warning 开始安装ZSH
-    sudo apt install zsh git fonts-firacode -y
+    apt install zsh git fonts-firacode -y
     e_warning 开始安装oh-my-zsh
     sh -c "$(curl -fsSL https://raw.github.com/robbyrussell/oh-my-zsh/master/tools/install.sh)" "" --unattended
     cp ~/.oh-my-zsh/templates/zshrc.zsh-template ~/.zshrc
@@ -347,30 +341,17 @@ app_zsh() {
     sed -i "s/plugins=.*/plugins=(extract zsh-syntax-highlighting zsh-autosuggestions git)/" ~/.zshrc
     echo "source ~/.profile" >>~/.zshrc
     e_warning 设置zsh为默认shell
-    sudo chsh -s /bin/zsh
+    chsh -s /bin/zsh
     e_success "请手动执行 zsh 和 source ~/.zshrc  "
     #source ~/.zshrc
 }
 app_netclient() {
-    curl -sL 'https://apt.netmaker.org/gpg.key' | sudo tee /etc/apt/trusted.gpg.d/netclient.asc
-    curl -sL 'https://apt.netmaker.org/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/netclient.list
-    sudo apt update
-    sudo apt install netclient -y
-    sudo systemctl enable netclient
-    sudo systemctl start netclient
-}
-app_kcptun() {
-    e_warning 开始安装kcptun
-    case $(uname -m) in
-    x86_64) _cpu=amd64 ;;
-    aarch64) _cpu=arm64 ;;
-    esac
-    mkdir /opt/kcptun
-    curl -s https://api.github.com/repos/xtaci/kcptun/releases/latest | grep -woi "https.*$(uname).*${_cpu}.*gz" | xargs wget -O kcptun.tar.gz
-    tar xvf kcptun.tar.gz -C /opt/kcptun && rm kcptun.tar.gz
-    mv /opt/kcptun/server* /opt/kcptun/kcptun-server
-    mv /opt/kcptun/client* /opt/kcptun/kcptun-client
-    e_success kcptun安装完毕
+    curl -sL 'https://apt.netmaker.org/gpg.key' | tee /etc/apt/trusted.gpg.d/netclient.asc
+    curl -sL 'https://apt.netmaker.org/debian.deb.txt' | tee /etc/apt/sources.list.d/netclient.list
+    apt update
+    apt install netclient -y
+    systemctl enable netclient
+    systemctl start netclient
 }
 clean_log() {
     echo >/var/log/wtmp
