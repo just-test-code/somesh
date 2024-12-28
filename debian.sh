@@ -222,7 +222,6 @@ eecho() {
 #全局变量
 fd_ver='10.1.0'
 
-
 set_swapfile() {
     e_warning 配置虚拟内存
     Mem=$(free -m | awk '/Mem:/{print $2}')
@@ -239,29 +238,14 @@ set_swapfile() {
         chmod 600 /swapfile
         [ -z "$(grep swapfile /etc/fstab)" ] && echo '/swapfile    swap    swap    defaults    0 0' >>/etc/fstab
         e_success 虚拟内存设置完毕 $MemCount
+    else
+        e_warning 虚拟内存无需配置
     fi
-    e_warning 虚拟内存无需配置
-
-}
-
-set_apt_source() {
-    cat >"/etc/apt/sources.list" <<EOF
-deb http://deb.debian.org/debian bullseye main
-deb-src http://deb.debian.org/debian bullseye main
-deb http://security.debian.org/debian-security bullseye-security main
-deb-src http://security.debian.org/debian-security bullseye-security main
-deb http://deb.debian.org/debian bullseye-updates main
-deb-src http://deb.debian.org/debian bullseye-updates main
-deb http://deb.debian.org/debian bullseye-backports main
-deb-src http://deb.debian.org/debian bullseye-backports main
-EOF
-    apt update
 }
 
 set_init() {
     e_warning 初始化系统
     apt update
-    apt install -y
     e_warning 更新系统
     apt update
     e_warning 安装常用库
@@ -274,8 +258,8 @@ set_ssh() {
         echo "变量 ssh_cert 不存在，停止执行"
         exit 1
     fi
-    [! -d "/root/.ssh" ] && mkdir "/root/.ssh"
-    echo $ssh_cert | cat >/root/.ssh/authorized_keys
+    [ ! -d "/root/.ssh" ] && mkdir "/root/.ssh"
+    echo "${ssh_cert}" >/root/.ssh/authorized_keys
     chmod 600 /root/.ssh/authorized_keys
     sed -i '/Protocol/d' /etc/ssh/sshd_config
     echo "Protocol 2" >>/etc/ssh/sshd_config
@@ -299,6 +283,7 @@ set_ntp() {
 
 set_clean() {
     e_warning 一键清理垃圾
+    bash <(curl -s https://raw.githubusercontent.com/JustTestCode/somesh/main/server_cleanup.sh)
     apt autoremove --purge
     apt clean
     apt autoclean
@@ -330,21 +315,49 @@ app_docker() {
 
 app_zsh() {
     e_warning 开始安装ZSH
-    apt install zsh git fonts-firacode -y
+    if ! apt install zsh git fonts-firacode -y; then
+        e_error "ZSH安装失败"
+        return 1
+    fi
+
     e_warning 开始安装oh-my-zsh
-    sh -c "$(curl -fsSL https://raw.github.com/robbyrussell/oh-my-zsh/master/tools/install.sh)" "" --unattended
+    if ! curl -fsSL --max-time 30 https://raw.github.com/robbyrussell/oh-my-zsh/master/tools/install.sh | sh -s -- --unattended; then
+        e_error "oh-my-zsh安装失败"
+        return 1
+    fi
+
+    if [ ! -f ~/.oh-my-zsh/templates/zshrc.zsh-template ]; then
+        e_error "zsh模板文件不存在"
+        return 1
+    fi
+
     cp ~/.oh-my-zsh/templates/zshrc.zsh-template ~/.zshrc
-    wget http://raw.github.com/caiogondim/bullet-train-oh-my-zsh-theme/master/bullet-train.zsh-theme -O ~/.oh-my-zsh/themes/bullet-train.zsh-theme
+
+    if ! wget --timeout=30 http://raw.github.com/caiogondim/bullet-train-oh-my-zsh-theme/master/bullet-train.zsh-theme -O ~/.oh-my-zsh/themes/bullet-train.zsh-theme; then
+        e_error "主题下载失败"
+        return 1
+    fi
+
     sed -i "s/ZSH_THEME=.*/ZSH_THEME='bullet-train'/" ~/.zshrc
-    git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions
-    git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting
+
+    if ! git clone --depth=1 https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions; then
+        e_error "自动补全插件安装失败"
+        return 1
+    fi
+
+    if ! git clone --depth=1 https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting; then
+        e_error "语法高亮插件安装失败"
+        return 1
+    fi
+
     sed -i "s/plugins=.*/plugins=(extract zsh-syntax-highlighting zsh-autosuggestions git)/" ~/.zshrc
     echo "source ~/.profile" >>~/.zshrc
+
     e_warning 设置zsh为默认shell
     chsh -s /bin/zsh
-    e_success "请手动执行 zsh 和 source ~/.zshrc  "
-    #source ~/.zshrc
+    e_success "ZSH安装完成！请手动执行：zsh 和 source ~/.zshrc"
 }
+
 app_netclient() {
     curl -sL 'https://apt.netmaker.org/gpg.key' | tee /etc/apt/trusted.gpg.d/netclient.asc
     curl -sL 'https://apt.netmaker.org/debian.deb.txt' | tee /etc/apt/sources.list.d/netclient.list
@@ -353,27 +366,173 @@ app_netclient() {
     systemctl enable netclient
     systemctl start netclient
 }
+
 clean_log() {
-    echo >/var/log/wtmp
-    echo >/var/log/btmp
-    echo >/var/log/lastlog
-    echo >/var/log/secure
-    echo >/var/log/messages
-    echo >/var/log/syslog
-    echo >/var/log/xferlog
-    echo >/var/log/auth.log
-    echo >/var/log/user.log
-    cat /dev/null >/var/adm/sylog
-    cat /dev/null >/var/log/maillog
-    cat /dev/null >/var/log/openwebmail.log
-    cat /dev/null >/var/log/mail.info
-    echo >/var/run/utmp
-    echo >~/.bash_history
+    e_warning "开始清理系统日志"
+    local log_files=(
+        "/var/log/wtmp"
+        "/var/log/btmp"
+        "/var/log/lastlog"
+        "/var/log/secure"
+        "/var/log/messages"
+        "/var/log/syslog"
+        "/var/log/xferlog"
+        "/var/log/auth.log"
+        "/var/log/user.log"
+        "/var/adm/sylog"
+        "/var/log/maillog"
+        "/var/log/openwebmail.log"
+        "/var/log/mail.info"
+        "/var/run/utmp"
+    )
+
+    for log_file in "${log_files[@]}"; do
+        if [ -f "$log_file" ]; then
+            if : >"$log_file"; then
+                e_success "已清理: $log_file"
+            else
+                e_error "清理失败: $log_file"
+            fi
+        fi
+    done
+
+    if [ -f ~/.bash_history ]; then
+        : >~/.bash_history
+        e_success "已清理: ~/.bash_history"
+    fi
+
     history -c
-    echo >.bash_history
+    e_success "历史记录已清理"
 }
-e_header 开始执行脚本
-for i in "$@"; do
-    $i
-done
-e_header 脚本执行完毕
+
+set_hostname() {
+    e_warning "修改主机名"
+    echo -e "$(yellow '请输入新的主机名：')"
+    read -r new_hostname
+    if [ -z "$new_hostname" ]; then
+        echo -e "$(red '错误：主机名不能为空')"
+        sleep 2
+        return
+    fi
+    # 验证主机名格式（只允许字母、数字、连字符）
+    if [[ ! $new_hostname =~ ^[a-zA-Z0-9-]+$ ]]; then
+        echo -e "$(red '错误：主机名只能包含字母、数字和连字符')"
+        sleep 2
+        return
+    fi
+    hostnamectl set-hostname "$new_hostname"
+    systemctl restart systemd-hostnamed
+    e_success "主机名已修改为：$new_hostname"
+}
+
+# 交互式菜单函数
+show_menu() {
+    # 定义菜单选项
+    options=(
+        "设置交换文件 (set_swapfile)"
+        "初始化系统配置 (set_init)"
+        "配置SSH (set_ssh)"
+        "配置NTP时间同步 (set_ntp)"
+        "清理系统 (set_clean)"
+        "更新系统 (set_update)"
+        "安装Docker (app_docker)"
+        "安装ZSH (app_zsh)"
+        "安装NetClient (app_netclient)"
+        "清理日志 (clean_log)"
+        "修改主机名 (set_hostname)"
+        "退出"
+    )
+
+    # 当前选中的选项索引
+    current=0
+
+    # 清屏
+    clear
+
+    # 显示菜单的函数
+    function print_menu {
+        local i=0
+        echo -e "\n$(blue '请使用上下方向键选择要执行的操作，按回车确认：')\n"
+        for item in "${options[@]}"; do
+            if [ $i -eq $current ]; then
+                echo -e "$(cyan '→') $(green "$item")"
+            else
+                echo "  $item"
+            fi
+            ((i++))
+        done
+    }
+
+    # 执行选中的功能
+    function execute_option {
+        clear
+        case $1 in
+        0) set_swapfile ;;
+        1) set_init ;;
+        2) # 配置SSH
+            echo -e "$(yellow '请输入SSH公钥（以ed25519或rsa开头的完整公钥字符串）：')"
+            read -r ssh_cert
+            if [ -z "$ssh_cert" ]; then
+                echo -e "$(red '错误：SSH公钥不能为空')"
+                sleep 2
+                return
+            fi
+            # 验证公钥格式
+            if [[ ! $ssh_cert =~ ^(ssh-ed25519|ssh-rsa) ]]; then
+                echo -e "$(red '错误：无效的SSH公钥格式')"
+                sleep 2
+                return
+            fi
+            set_ssh
+            ;;
+        3) set_ntp ;;
+        4) set_clean ;;
+        5) set_update ;;
+        6) app_docker ;;
+        7) app_zsh ;;
+        8) app_netclient ;;
+        9) clean_log ;;
+        10) set_hostname ;;
+        11) exit 0 ;;
+        esac
+        echo -e "\n$(yellow '按任意键返回主菜单...')"
+        read -n 1
+    }
+
+    # 捕获键盘输入
+    while true; do
+        print_menu
+        read -rsn1 key
+        case "$key" in
+        $'\x1B') # ESC键的ASCII码
+            read -rsn2 key
+            case "$key" in
+            "[A") # 上箭头
+                if [ $current -gt 0 ]; then
+                    ((current--))
+                fi
+                ;;
+            "[B") # 下箭头
+                if [ $current -lt $((${#options[@]} - 1)) ]; then
+                    ((current++))
+                fi
+                ;;
+            esac
+            ;;
+        "") # 回车键
+            execute_option $current
+            ;;
+        esac
+        clear
+    done
+}
+
+e_header "欢迎使用服务器管理脚本"
+if [ $# -eq 0 ]; then
+    show_menu
+else
+    for i in "$@"; do
+        $i
+    done
+fi
+e_header "脚本执行完毕"
