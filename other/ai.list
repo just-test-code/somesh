@@ -1,8 +1,10 @@
 # 内容：AI
-# 数量：2条
+# 数量：8条
 DOMAIN-SUFFIX,bard.google.com
 DOMAIN-SUFFIX,copilot.microsoft.com
 DOMAIN-SUFFIX,groq.com
 DOMAIN-SUFFIX,anthropic.com
 DOMAIN-SUFFIX,openai.com
 DOMAIN-SUFFIX,openaiapi-site.azureedge.net
+DOMAIN-SUFFIX,ai.google.dev
+DOMAIN-SUFFIX,aistudio.google.com
