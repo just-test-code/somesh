@@ -1,0 +1,6 @@
+# 内容：直连内容
+PROCESS-NAME,tailscale.exe
+PROCESS-NAME,tailscaled.exe
+PROCESS-NAME,tailscale-ipn.exe
+PROCESS-NAME,Weixin.exe
+PROCESS-NAME,WeChatAppEx.exe
