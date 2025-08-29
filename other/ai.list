@@ -9,3 +9,5 @@ DOMAIN-SUFFIX,openaiapi-site.azureedge.net
 DOMAIN-SUFFIX,ai.google.dev
 DOMAIN-SUFFIX,aistudio.google.com
 DOMAIN-SUFFIX,notebooklm.google
+PROCESS-NAME,Cursor.exe
+PROCESS-NAME,Windsurf.exe
