@@ -197,13 +197,6 @@ proxy-groups:
     interval: 300
     tolerance: 50
 rule-providers:
-  LocalAreaNetwork:
-    url: https://testingcf.jsdelivr.net/gh/ACL4SSR/ACL4SSR@master/Clash/LocalAreaNetwork.list
-    path: ./ruleset/LocalAreaNetwork.list
-    behavior: classical
-    interval: 86400
-    format: text
-    type: http
   directRule:
     url: https://testingcf.jsdelivr.net/gh/just-test-code/somesh@master/other/direct.list
     path: ./ruleset/direct.list
@@ -221,6 +214,13 @@ rule-providers:
   Github:
     url: https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Ruleset/Github.list
     path: ./ruleset/Github.yaml
+    behavior: classical
+    interval: 86400
+    format: text
+    type: http
+  LocalAreaNetwork:
+    url: https://testingcf.jsdelivr.net/gh/ACL4SSR/ACL4SSR@master/Clash/LocalAreaNetwork.list
+    path: ./ruleset/LocalAreaNetwork.list
     behavior: classical
     interval: 86400
     format: text
