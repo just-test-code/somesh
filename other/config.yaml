@@ -40,7 +40,7 @@ proxy-groups:
     interval: 300
     tolerance: 50
     include-all: true
-    exclude-filter: (?i)中|香|CN|cn|HK|hk
+    exclude-filter: (?i)中|香|CN|cn|HK|hk|俄|ru|RU
   - name: 💬 OpenAi
     type: select
     proxies:
@@ -204,8 +204,15 @@ rule-providers:
     interval: 86400
     format: text
     type: http
+  directRule:
+    url: https://testingcf.jsdelivr.net/gh/just-test-code/somesh@master/other/direct.list
+    path: ./ruleset/direct.list
+    behavior: classical
+    interval: 86400
+    format: text
+    type: http
   ai:
-    url: https://testingcf.jsdelivr.net/gh/JustTestCode/somesh@master/other/ai.list
+    url: https://testingcf.jsdelivr.net/gh/just-test-code/somesh@master/other/ai.list
     path: ./ruleset/ai.yaml
     behavior: classical
     interval: 86400
@@ -423,10 +430,11 @@ rule-providers:
     type: http
 
 rules:
-  - RULE-SET,LocalAreaNetwork,🎯 全球直连
-  - RULE-SET,UnBan,🎯 全球直连
+  - RULE-SET,directRule,🎯 全球直连
   - RULE-SET,ai,💬 OpenAi
   - RULE-SET,Github,😊 编程依赖
+  - RULE-SET,LocalAreaNetwork,🎯 全球直连
+  - RULE-SET,UnBan,🎯 全球直连
   - RULE-SET,BanAD,🛑 广告拦截
   - RULE-SET,BanProgramAD,🍃 应用净化
   - RULE-SET,GoogleFCM,📢 谷歌FCM
