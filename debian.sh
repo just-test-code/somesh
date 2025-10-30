@@ -219,6 +219,41 @@ eecho() {
 
 #日志类结束
 
+# 检查 sudo 权限
+check_sudo() {
+    e_warning "检查 sudo 权限..."
+
+    # 检查是否为 root 用户
+    if [ "$EUID" -eq 0 ]; then
+        e_success "当前以 root 用户运行"
+        return 0
+    fi
+
+    # 检查是否安装了 sudo
+    if ! command -v sudo &> /dev/null; then
+        e_error "系统未安装 sudo，请先安装 sudo 或使用 root 用户运行"
+        exit 1
+    fi
+
+    # 测试 sudo 权限
+    if sudo -n true 2>/dev/null; then
+        e_success "sudo 权限验证成功（无需密码）"
+        return 0
+    fi
+
+    # 需要输入密码
+    e_warning "此脚本需要 sudo 权限，请输入密码"
+    if sudo -v; then
+        e_success "sudo 权限验证成功"
+        # 保持 sudo 会话活跃
+        while true; do sudo -n true; sleep 50; kill -0 "$$" || exit; done 2>/dev/null &
+        return 0
+    else
+        e_error "sudo 权限验证失败，脚本退出"
+        exit 1
+    fi
+}
+
 #全局变量
 fd_ver='10.1.0'
 
@@ -232,11 +267,11 @@ set_swapfile() {
         elif [ $Mem -gt 1024 ]; then
             MemCount=2048
         fi
-        dd if=/dev/zero of=/swapfile count=$MemCount bs=1M
-        mkswap /swapfile
-        swapon /swapfile
-        chmod 600 /swapfile
-        [ -z "$(grep swapfile /etc/fstab)" ] && echo '/swapfile    swap    swap    defaults    0 0' >>/etc/fstab
+        sudo dd if=/dev/zero of=/swapfile count=$MemCount bs=1M
+        sudo mkswap /swapfile
+        sudo swapon /swapfile
+        sudo chmod 600 /swapfile
+        [ -z "$(grep swapfile /etc/fstab)" ] && echo '/swapfile    swap    swap    defaults    0 0' | sudo tee -a /etc/fstab
         e_success 虚拟内存设置完毕 $MemCount
     else
         e_warning 虚拟内存无需配置
@@ -245,11 +280,11 @@ set_swapfile() {
 
 set_init() {
     e_warning 初始化系统
-    apt update
+    sudo apt update
     e_warning 更新系统
-    apt update
+    sudo apt update
     e_warning 安装常用库
-    apt install curl wget unzip zip jq lrzsz tmux -y
+    sudo apt install sudo curl wget unzip zip jq lrzsz tmux fonts-firacode -y
 }
 
 set_ssh() {
@@ -258,64 +293,64 @@ set_ssh() {
         echo "变量 ssh_cert 不存在，停止执行"
         exit 1
     fi
-    [ ! -d "/root/.ssh" ] && mkdir "/root/.ssh"
-    echo "${ssh_cert}" >/root/.ssh/authorized_keys
-    chmod 600 /root/.ssh/authorized_keys
-    sed -i '/Protocol/d' /etc/ssh/sshd_config
-    echo "Protocol 2" >>/etc/ssh/sshd_config
-    sed -i "s/.*RSAAuthentication.*/RSAAuthentication yes/g" /etc/ssh/sshd_config
-    sed -i "s/.*PubkeyAuthentication.*/PubkeyAuthentication yes/g" /etc/ssh/sshd_config
-    sed -i "s/.*PasswordAuthentication.*/PasswordAuthentication no/g" /etc/ssh/sshd_config
-    sed -i "s/.*AuthorizedKeysFile.*/AuthorizedKeysFile\t\.ssh\/authorized_keys/g" /etc/ssh/sshd_config
-    sed -i "s/.*PermitRootLogin.*/PermitRootLogin yes/g" /etc/ssh/sshd_config
-    service sshd restart
+    [ ! -d "/root/.ssh" ] && sudo mkdir "/root/.ssh"
+    echo "${ssh_cert}" | sudo tee /root/.ssh/authorized_keys
+    sudo chmod 600 /root/.ssh/authorized_keys
+    sudo sed -i '/Protocol/d' /etc/ssh/sshd_config
+    echo "Protocol 2" | sudo tee -a /etc/ssh/sshd_config
+    sudo sed -i "s/.*RSAAuthentication.*/RSAAuthentication yes/g" /etc/ssh/sshd_config
+    sudo sed -i "s/.*PubkeyAuthentication.*/PubkeyAuthentication yes/g" /etc/ssh/sshd_config
+    sudo sed -i "s/.*PasswordAuthentication.*/PasswordAuthentication no/g" /etc/ssh/sshd_config
+    sudo sed -i "s/.*AuthorizedKeysFile.*/AuthorizedKeysFile\t\.ssh\/authorized_keys/g" /etc/ssh/sshd_config
+    sudo sed -i "s/.*PermitRootLogin.*/PermitRootLogin yes/g" /etc/ssh/sshd_config
+    sudo service sshd restart
     e_success "密钥配置完成"
 }
 
 set_ntp() {
     e_warning 安装时间同步ntp
-    apt install ntp -y
-    systemctl enable ntp
-    service ntp restart
-    ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
+    sudo apt install ntp -y
+    sudo systemctl enable ntp
+    sudo service ntp restart
+    sudo ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
     date
 }
 
 set_clean() {
     e_warning 一键清理垃圾
     bash <(curl -s https://raw.githubusercontent.com/JustTestCode/somesh/main/server_cleanup.sh)
-    apt autoremove --purge
-    apt clean
-    apt autoclean
-    apt remove --purge $(dpkg -l | awk '/^rc/ {print $2}')
-    journalctl --rotate
-    journalctl --vacuum-time=1s
-    journalctl --vacuum-size=50M
-    apt remove --purge $(dpkg -l | awk '/^ii linux-(image|headers)-[^ ]+/{print $2}' | grep -v $(uname -r | sed 's/-.*//') | xargs)
+    sudo apt autoremove --purge
+    sudo apt clean
+    sudo apt autoclean
+    sudo apt remove --purge $(dpkg -l | awk '/^rc/ {print $2}')
+    sudo journalctl --rotate
+    sudo journalctl --vacuum-time=1s
+    sudo journalctl --vacuum-size=50M
+    sudo apt remove --purge $(dpkg -l | awk '/^ii linux-(image|headers)-[^ ]+/{print $2}' | grep -v $(uname -r | sed 's/-.*//') | xargs)
 }
 
 set_update() {
     e_warning 一键纯净更新
-    apt update -y
-    apt full-upgrade -y
-    apt autoremove -y
-    apt autoclean -y
+    sudo apt update -y
+    sudo apt full-upgrade -y
+    sudo apt autoremove -y
+    sudo apt autoclean -y
 }
 
 app_docker() {
     e_warning 开始安装Docker
-    curl -fsSL https://get.docker.com | bash -s docker
+    curl -fsSL https://get.docker.com | sudo bash -s docker
     # e_warning 开始安装Docker-compose
     # compose_ver=$(wget -qO- -t1 -T2 "https://api.github.com/repos/docker/compose/releases/latest" | jq -r '.tag_name')
     # curl -L "https://github.com/docker/compose/releases/download/$compose_ver/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-    # chmod +x /usr/local/bin/docker-compose
-    # ln -s /usr/local/bin/docker-compose /usr/bin/dc
+    # sudo chmod +x /usr/local/bin/docker-compose
+    # sudo ln -s /usr/local/bin/docker-compose /usr/bin/dc
     e_success Docker安装完毕
 }
 
 app_zsh() {
     e_warning 开始安装ZSH
-    if ! apt install zsh git fonts-firacode -y; then
+    if ! sudo apt install zsh git fonts-firacode -y; then
         e_error "ZSH安装失败"
         return 1
     fi
@@ -354,17 +389,17 @@ app_zsh() {
     echo "source ~/.profile" >>~/.zshrc
 
     e_warning 设置zsh为默认shell
-    chsh -s /bin/zsh
+    sudo chsh -s /bin/zsh
     e_success "ZSH安装完成！请手动执行：zsh 和 source ~/.zshrc"
 }
 
 app_netclient() {
-    curl -sL 'https://apt.netmaker.org/gpg.key' | tee /etc/apt/trusted.gpg.d/netclient.asc
-    curl -sL 'https://apt.netmaker.org/debian.deb.txt' | tee /etc/apt/sources.list.d/netclient.list
-    apt update
-    apt install netclient -y
-    systemctl enable netclient
-    systemctl start netclient
+    curl -sL 'https://apt.netmaker.org/gpg.key' | sudo tee /etc/apt/trusted.gpg.d/netclient.asc
+    curl -sL 'https://apt.netmaker.org/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/netclient.list
+    sudo apt update
+    sudo apt install netclient -y
+    sudo systemctl enable netclient
+    sudo systemctl start netclient
 }
 
 clean_log() {
@@ -388,7 +423,7 @@ clean_log() {
 
     for log_file in "${log_files[@]}"; do
         if [ -f "$log_file" ]; then
-            if : >"$log_file"; then
+            if sudo bash -c ": >$log_file"; then
                 e_success "已清理: $log_file"
             else
                 e_error "清理失败: $log_file"
@@ -420,8 +455,8 @@ set_hostname() {
         sleep 2
         return
     fi
-    hostnamectl set-hostname "$new_hostname"
-    systemctl restart systemd-hostnamed
+    sudo hostnamectl set-hostname "$new_hostname"
+    sudo systemctl restart systemd-hostnamed
     e_success "主机名已修改为：$new_hostname"
 }
 
@@ -528,6 +563,10 @@ show_menu() {
 }
 
 e_header "欢迎使用服务器管理脚本"
+
+# 检查并要求 sudo 权限
+check_sudo
+
 if [ $# -eq 0 ]; then
     show_menu
 else
