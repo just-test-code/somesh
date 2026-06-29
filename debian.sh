@@ -217,6 +217,15 @@ eecho() {
     echo "$@" 1>&2
 }
 
+# 从终端读取输入（兼容 curl | bash 管道执行时 stdin 被占用的情况）
+read_tty() {
+    if [ -e /dev/tty ]; then
+        read "$@" </dev/tty
+    else
+        read "$@"
+    fi
+}
+
 #日志类结束
 
 # 检查 sudo 权限
@@ -293,18 +302,35 @@ set_ssh() {
         echo "变量 ssh_cert 不存在，停止执行"
         exit 1
     fi
-    [ ! -d "/root/.ssh" ] && sudo mkdir "/root/.ssh"
-    echo "${ssh_cert}" | sudo tee /root/.ssh/authorized_keys
-    sudo chmod 600 /root/.ssh/authorized_keys
+    local ssh_user="${SUDO_USER:-$(whoami)}"
+    local ssh_home
+    ssh_home="$(getent passwd "${ssh_user}" | cut -d: -f6)"
+    if [ -z "${ssh_home}" ]; then
+        echo "无法获取用户 ${ssh_user} 的家目录，停止执行"
+        exit 1
+    fi
+    local ssh_dir="${ssh_home}/.ssh"
+    local auth_keys="${ssh_dir}/authorized_keys"
+
+    sudo mkdir -p "${ssh_dir}"
+    echo "${ssh_cert}" | sudo tee "${auth_keys}" > /dev/null
+    sudo chmod 700 "${ssh_dir}"
+    sudo chmod 600 "${auth_keys}"
+    sudo chown -R "${ssh_user}:${ssh_user}" "${ssh_dir}"
+
     sudo sed -i '/Protocol/d' /etc/ssh/sshd_config
-    echo "Protocol 2" | sudo tee -a /etc/ssh/sshd_config
+    echo "Protocol 2" | sudo tee -a /etc/ssh/sshd_config > /dev/null
     sudo sed -i "s/.*RSAAuthentication.*/RSAAuthentication yes/g" /etc/ssh/sshd_config
     sudo sed -i "s/.*PubkeyAuthentication.*/PubkeyAuthentication yes/g" /etc/ssh/sshd_config
     sudo sed -i "s/.*PasswordAuthentication.*/PasswordAuthentication no/g" /etc/ssh/sshd_config
     sudo sed -i "s/.*AuthorizedKeysFile.*/AuthorizedKeysFile\t\.ssh\/authorized_keys/g" /etc/ssh/sshd_config
-    sudo sed -i "s/.*PermitRootLogin.*/PermitRootLogin yes/g" /etc/ssh/sshd_config
+    if [ "${ssh_user}" = "root" ]; then
+        sudo sed -i "s/.*PermitRootLogin.*/PermitRootLogin yes/g" /etc/ssh/sshd_config
+    else
+        sudo sed -i "s/.*PermitRootLogin.*/PermitRootLogin prohibit-password/g" /etc/ssh/sshd_config
+    fi
     sudo service sshd restart
-    e_success "密钥配置完成"
+    e_success "密钥配置完成（用户: ${ssh_user}）"
 }
 
 set_ntp() {
@@ -340,11 +366,6 @@ set_update() {
 app_docker() {
     e_warning 开始安装Docker
     curl -fsSL https://get.docker.com | sudo bash -s docker
-    # e_warning 开始安装Docker-compose
-    # compose_ver=$(wget -qO- -t1 -T2 "https://api.github.com/repos/docker/compose/releases/latest" | jq -r '.tag_name')
-    # curl -L "https://github.com/docker/compose/releases/download/$compose_ver/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-    # sudo chmod +x /usr/local/bin/docker-compose
-    # sudo ln -s /usr/local/bin/docker-compose /usr/bin/dc
     e_success Docker安装完毕
 }
 
@@ -380,12 +401,17 @@ app_zsh() {
         return 1
     fi
 
-    if ! git clone --depth=1 https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting; then
-        e_error "语法高亮插件安装失败"
+    # if ! git clone --depth=1 https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting; then
+    #     e_error "语法高亮插件安装失败"
+    #     return 1
+    # fi
+
+    if ! git clone --depth=1 https://github.com/zdharma-continuum/fast-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/fast-syntax-highlighting; then
+        e_error "快速语法高亮插件安装失败"
         return 1
     fi
 
-    sed -i "s/plugins=.*/plugins=(extract zsh-syntax-highlighting zsh-autosuggestions git)/" ~/.zshrc
+    sed -i "s/plugins=.*/plugins=(extract fast-syntax-highlighting  zsh-autosuggestions zsh-interactive-cd sudo z copypath git)/" ~/.zshrc
     echo "source ~/.profile" >>~/.zshrc
 
     e_warning 设置zsh为默认shell
@@ -443,7 +469,7 @@ clean_log() {
 set_hostname() {
     e_warning "修改主机名"
     echo -e "$(yellow '请输入新的主机名：')"
-    read -r new_hostname
+    read_tty -r new_hostname
     if [ -z "$new_hostname" ]; then
         echo -e "$(red '错误：主机名不能为空')"
         sleep 2
@@ -506,7 +532,7 @@ show_menu() {
         1) set_init ;;
         2) # 配置SSH
             echo -e "$(yellow '请输入SSH公钥（以ed25519或rsa开头的完整公钥字符串）：')"
-            read -r ssh_cert
+            read_tty -r ssh_cert
             if [ -z "$ssh_cert" ]; then
                 echo -e "$(red '错误：SSH公钥不能为空')"
                 sleep 2
@@ -531,16 +557,16 @@ show_menu() {
         11) exit 0 ;;
         esac
         echo -e "\n$(yellow '按任意键返回主菜单...')"
-        read -n 1
+        read_tty -n 1
     }
 
     # 捕获键盘输入
     while true; do
         print_menu
-        read -rsn1 key
+        read_tty -rsn1 key
         case "$key" in
         $'\x1B') # ESC键的ASCII码
-            read -rsn2 key
+            read_tty -rsn2 key
             case "$key" in
             "[A") # 上箭头
                 if [ $current -gt 0 ]; then
