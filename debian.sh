@@ -291,9 +291,27 @@ set_init() {
     e_warning 初始化系统
     sudo apt update
     e_warning 更新系统
+    sudo apt update -y
+    set_libs
+}
+
+_install_eza() {
+    sudo mkdir -p /etc/apt/keyrings
+    wget -qO- https://raw.githubusercontent.com/eza-community/eza/main/deb.asc | sudo gpg --dearmor -o /etc/apt/keyrings/gierens.gpg
+    echo "deb [signed-by=/etc/apt/keyrings/gierens.gpg] http://deb.gierens.de stable main" | sudo tee /etc/apt/sources.list.d/gierens.list
+    sudo chmod 644 /etc/apt/keyrings/gierens.gpg /etc/apt/sources.list.d/gierens.list
     sudo apt update
+    sudo apt install eza -y
+}
+
+set_libs() {
     e_warning 安装常用库
-    sudo apt install sudo curl wget unzip zip jq lrzsz tmux fonts-firacode -y
+    sudo apt update
+    sudo apt install sudo curl wget unzip zip jq lrzsz tmux fonts-firacode fd-find ripgrep bat -y
+    _install_eza
+    e_success 常用库安装完毕
+    sudo ln -s $(which fdfind) ~/.local/bin/fd
+    curl -sSfL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | sh #安装zoxide
 }
 
 set_ssh() {
@@ -419,15 +437,6 @@ app_zsh() {
     e_success "ZSH安装完成！请手动执行：zsh 和 source ~/.zshrc"
 }
 
-app_netclient() {
-    curl -sL 'https://apt.netmaker.org/gpg.key' | sudo tee /etc/apt/trusted.gpg.d/netclient.asc
-    curl -sL 'https://apt.netmaker.org/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/netclient.list
-    sudo apt update
-    sudo apt install netclient -y
-    sudo systemctl enable netclient
-    sudo systemctl start netclient
-}
-
 clean_log() {
     e_warning "开始清理系统日志"
     local log_files=(
@@ -492,13 +501,13 @@ show_menu() {
     options=(
         "设置交换文件 (set_swapfile)"
         "初始化系统配置 (set_init)"
+        "安装常用库 (set_libs)"
         "配置SSH (set_ssh)"
         "配置NTP时间同步 (set_ntp)"
         "清理系统 (set_clean)"
         "更新系统 (set_update)"
         "安装Docker (app_docker)"
         "安装ZSH (app_zsh)"
-        "安装NetClient (app_netclient)"
         "清理日志 (clean_log)"
         "修改主机名 (set_hostname)"
         "退出"
@@ -530,7 +539,8 @@ show_menu() {
         case $1 in
         0) set_swapfile ;;
         1) set_init ;;
-        2) # 配置SSH
+        2) set_libs ;;
+        3) # 配置SSH
             echo -e "$(yellow '请输入SSH公钥（以ed25519或rsa开头的完整公钥字符串）：')"
             read_tty -r ssh_cert
             if [ -z "$ssh_cert" ]; then
@@ -546,12 +556,11 @@ show_menu() {
             fi
             set_ssh
             ;;
-        3) set_ntp ;;
-        4) set_clean ;;
-        5) set_update ;;
-        6) app_docker ;;
-        7) app_zsh ;;
-        8) app_netclient ;;
+        4) set_ntp ;;
+        5) set_clean ;;
+        6) set_update ;;
+        7) app_docker ;;
+        8) app_zsh ;;
         9) clean_log ;;
         10) set_hostname ;;
         11) exit 0 ;;
