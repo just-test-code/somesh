@@ -1,13 +1,64 @@
 # 内容：AI
-# 数量：8条
+# 数量：62条
 DOMAIN-SUFFIX,bard.google.com
 DOMAIN-SUFFIX,copilot.microsoft.com
 DOMAIN-SUFFIX,groq.com
 DOMAIN-SUFFIX,anthropic.com
+DOMAIN-SUFFIX,claude.ai
+DOMAIN-SUFFIX,claudeusercontent.com
 DOMAIN-SUFFIX,openai.com
+DOMAIN-SUFFIX,chatgpt.com
+DOMAIN-SUFFIX,oaistatic.com
+DOMAIN-SUFFIX,oaiusercontent.com
 DOMAIN-SUFFIX,openaiapi-site.azureedge.net
 DOMAIN-SUFFIX,ai.google.dev
 DOMAIN-SUFFIX,aistudio.google.com
+DOMAIN-SUFFIX,gemini.google.com
+DOMAIN-SUFFIX,generativelanguage.googleapis.com
 DOMAIN-SUFFIX,notebooklm.google
+DOMAIN-SUFFIX,perplexity.ai
+DOMAIN-SUFFIX,poe.com
+DOMAIN-SUFFIX,openrouter.ai
+DOMAIN-SUFFIX,x.ai
+DOMAIN-SUFFIX,grok.com
+DOMAIN-SUFFIX,meta.ai
+DOMAIN-SUFFIX,cursor.com
+DOMAIN-SUFFIX,cursorapi.com
+DOMAIN-SUFFIX,cursor.sh
+DOMAIN-SUFFIX,claude.com
+DOMAIN-SUFFIX,trae.ai
 PROCESS-NAME,Cursor.exe
+PROCESS-NAME,Cursor
+PROCESS-NAME,cursor
+PROCESS-NAME,Cursor Helper.exe
+PROCESS-NAME,Cursor Helper
+PROCESS-NAME,cursor-helper
 PROCESS-NAME,Windsurf.exe
+PROCESS-NAME,Windsurf
+PROCESS-NAME,windsurf
+PROCESS-NAME,Windsurf Helper.exe
+PROCESS-NAME,Windsurf Helper
+PROCESS-NAME,windsurf-helper
+PROCESS-NAME,Claude.exe
+PROCESS-NAME,Claude
+PROCESS-NAME,claude
+PROCESS-NAME,ChatGPT.exe
+PROCESS-NAME,ChatGPT
+PROCESS-NAME,chatgpt
+PROCESS-NAME,Codex.exe
+PROCESS-NAME,Codex
+PROCESS-NAME,codex
+PROCESS-NAME,codex-cli.exe
+PROCESS-NAME,codex-cli
+PROCESS-NAME,Codex CLI.exe
+PROCESS-NAME,Codex CLI
+PROCESS-NAME,Trae.exe
+PROCESS-NAME,Trae
+PROCESS-NAME,trae
+PROCESS-NAME,Trae Helper.exe
+PROCESS-NAME,Trae Helper
+PROCESS-NAME,trae-helper
+PROCESS-NAME,trae-cli.exe
+PROCESS-NAME,trae-cli
+PROCESS-NAME,Trae CLI.exe
+PROCESS-NAME,Trae CLI
