@@ -1,6 +1,106 @@
 # 内容：直连内容
+# Windows / macOS 常用远程控制与组网软件
+# PROCESS-NAME 需要客户端支持进程匹配；域名规则用于补充服务连接。
+# 自建服务的域名、虚拟网段请按实际配置另行添加。
+
+# Tailscale（含 macOS App Store / 独立版网络扩展）
 PROCESS-NAME,tailscale.exe
 PROCESS-NAME,tailscaled.exe
 PROCESS-NAME,tailscale-ipn.exe
+PROCESS-NAME,Tailscale
+PROCESS-NAME,tailscale
+PROCESS-NAME,tailscaled
+PROCESS-NAME,IPNExtension
+PROCESS-NAME,io.tailscale.ipn.macsys.network-extension
+PROCESS-NAME,io.tailscale.ipn.macos.network-extension
+DOMAIN-SUFFIX,tailscale.com
+DOMAIN-SUFFIX,tailscale.io
+DOMAIN-SUFFIX,ts.net
+
+# ZeroTier
+PROCESS-NAME,zerotier-one_x64.exe
+PROCESS-NAME,zerotier-one_x86.exe
+PROCESS-NAME,zerotier_desktop_ui.exe
+PROCESS-NAME,zerotier-one
+PROCESS-NAME,ZeroTier One
+DOMAIN-SUFFIX,zerotier.com
+
+# NetBird
+PROCESS-NAME,netbird.exe
+PROCESS-NAME,netbird-ui.exe
+PROCESS-NAME,netbird
+PROCESS-NAME,netbird-ui
+DOMAIN-SUFFIX,netbird.io
+
+# WireGuard（内核隧道流量可能需要额外的目标 IP / 路由规则）
+PROCESS-NAME,wireguard.exe
+PROCESS-NAME,WireGuard
+PROCESS-NAME,wireguard-go
+PROCESS-NAME,WireGuardNetworkExtension
+
+# ToDesk
+PROCESS-NAME,ToDesk.exe
+PROCESS-NAME,ToDesk_Service.exe
+PROCESS-NAME,ToDesk
+PROCESS-NAME,ToDesk_Service
+DOMAIN-SUFFIX,todesk.com
+
+# 向日葵
+PROCESS-NAME,SunloginClient.exe
+PROCESS-NAME,SunloginClient
+PROCESS-NAME,SunloginClient_Desktop
+PROCESS-NAME,SunloginClient_Service
+DOMAIN-SUFFIX,sunlogin.oray.com
+DOMAIN-SUFFIX,oray.net
+
+# RustDesk
+PROCESS-NAME,rustdesk.exe
+PROCESS-NAME,RustDesk
+PROCESS-NAME,rustdesk
+DOMAIN-SUFFIX,rustdesk.com
+
+# AnyDesk
+PROCESS-NAME,AnyDesk.exe
+PROCESS-NAME,AnyDesk
+PROCESS-NAME,anydesk
+DOMAIN-SUFFIX,anydesk.com
+
+# TeamViewer
+PROCESS-NAME,TeamViewer.exe
+PROCESS-NAME,TeamViewer_Service.exe
+PROCESS-NAME,TeamViewer_Desktop.exe
+PROCESS-NAME,TeamViewer
+PROCESS-NAME,TeamViewer_Service
+PROCESS-NAME,TeamViewer_Desktop
+DOMAIN-SUFFIX,teamviewer.com
+
+# Jump Desktop / Jump Desktop Connect
+PROCESS-NAME,JumpDesktop.exe
+PROCESS-NAME,JumpConnect.exe
+PROCESS-NAME,Jump Desktop
+PROCESS-NAME,JumpConnect
+DOMAIN-SUFFIX,jumpdesktop.com
+
+# Parsec
+PROCESS-NAME,parsecd.exe
+PROCESS-NAME,pservice.exe
+PROCESS-NAME,parsecd
+DOMAIN-SUFFIX,parsec.app
+DOMAIN-SUFFIX,parsecgaming.com
+
+# Windows 远程桌面 / macOS Microsoft Remote Desktop、Windows App
+PROCESS-NAME,mstsc.exe
+PROCESS-NAME,msrdc.exe
+PROCESS-NAME,msrdcw.exe
+PROCESS-NAME,Microsoft Remote Desktop
+PROCESS-NAME,Windows App
+
+# macOS 屏幕共享 / Apple Remote Desktop
+PROCESS-NAME,Screen Sharing
+PROCESS-NAME,screensharingd
+PROCESS-NAME,Remote Desktop
+PROCESS-NAME,ARDAgent
+
+# 微信（保留原有规则）
 PROCESS-NAME,Weixin.exe
 PROCESS-NAME,WeChatAppEx.exe

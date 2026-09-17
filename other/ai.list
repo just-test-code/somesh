@@ -1,47 +1,24 @@
-# 内容：AI
-# 数量：62条
-DOMAIN-SUFFIX,bard.google.com
-DOMAIN-SUFFIX,copilot.microsoft.com
-DOMAIN-SUFFIX,groq.com
-DOMAIN-SUFFIX,anthropic.com
-DOMAIN-SUFFIX,claude.ai
-DOMAIN-SUFFIX,claudeusercontent.com
+# 内容：AI 应用与服务（Windows / macOS）
+# 数量：86条
+# 整理日期：2026-09-17
+# 重点覆盖中国大陆 / 香港存在地区限制的服务，同时保留原有常用 AI 工具。
+# 规则仅负责分流；实际出口由引用本文件的 AI 策略组决定，地区限制以官方为准。
+# Gemini 网页版已列出香港；AI Studio / Gemini API 的地区列表仍未列出中国大陆、香港。
+# PROCESS-NAME 需客户端支持进程匹配；Node.js CLI 依靠域名规则，不匹配整个 node 进程。
+# 共享登录、CDN 等依赖沿用其他规则，避免将整个 Google / Microsoft / GitHub 分流到 AI 组。
+# 地区参考：https://www.anthropic.com/supported-countries
+# 地区参考：https://ai.google.dev/gemini-api/docs/available-regions
+# 地区参考：https://support.google.com/gemini/answer/13575153?hl=en
+# 网络参考：https://docs.github.com/en/copilot/reference/copilot-allowlist-reference
+# 网络参考：https://cursor.com/docs/enterprise/network-configuration
+# 网络参考：https://docs.windsurf.com/troubleshooting/windsurf-common-issues
+
+# 一、核心服务：OpenAI / ChatGPT / Codex / Sora
 DOMAIN-SUFFIX,openai.com
 DOMAIN-SUFFIX,chatgpt.com
 DOMAIN-SUFFIX,oaistatic.com
 DOMAIN-SUFFIX,oaiusercontent.com
 DOMAIN-SUFFIX,openaiapi-site.azureedge.net
-DOMAIN-SUFFIX,ai.google.dev
-DOMAIN-SUFFIX,aistudio.google.com
-DOMAIN-SUFFIX,gemini.google.com
-DOMAIN-SUFFIX,generativelanguage.googleapis.com
-DOMAIN-SUFFIX,notebooklm.google
-DOMAIN-SUFFIX,perplexity.ai
-DOMAIN-SUFFIX,poe.com
-DOMAIN-SUFFIX,openrouter.ai
-DOMAIN-SUFFIX,x.ai
-DOMAIN-SUFFIX,grok.com
-DOMAIN-SUFFIX,meta.ai
-DOMAIN-SUFFIX,cursor.com
-DOMAIN-SUFFIX,cursorapi.com
-DOMAIN-SUFFIX,cursor.sh
-DOMAIN-SUFFIX,claude.com
-DOMAIN-SUFFIX,trae.ai
-PROCESS-NAME,Cursor.exe
-PROCESS-NAME,Cursor
-PROCESS-NAME,cursor
-PROCESS-NAME,Cursor Helper.exe
-PROCESS-NAME,Cursor Helper
-PROCESS-NAME,cursor-helper
-PROCESS-NAME,Windsurf.exe
-PROCESS-NAME,Windsurf
-PROCESS-NAME,windsurf
-PROCESS-NAME,Windsurf Helper.exe
-PROCESS-NAME,Windsurf Helper
-PROCESS-NAME,windsurf-helper
-PROCESS-NAME,Claude.exe
-PROCESS-NAME,Claude
-PROCESS-NAME,claude
 PROCESS-NAME,ChatGPT.exe
 PROCESS-NAME,ChatGPT
 PROCESS-NAME,chatgpt
@@ -52,6 +29,75 @@ PROCESS-NAME,codex-cli.exe
 PROCESS-NAME,codex-cli
 PROCESS-NAME,Codex CLI.exe
 PROCESS-NAME,Codex CLI
+DOMAIN-SUFFIX,oaistatsig.com
+DOMAIN,cdn.openaimerge.com
+DOMAIN-SUFFIX,sora.com
+
+# Anthropic / Claude / Claude Code
+DOMAIN-SUFFIX,anthropic.com
+DOMAIN-SUFFIX,claude.ai
+DOMAIN-SUFFIX,claudeusercontent.com
+DOMAIN-SUFFIX,claude.com
+PROCESS-NAME,Claude.exe
+PROCESS-NAME,claude.exe
+PROCESS-NAME,Claude
+PROCESS-NAME,claude
+
+# 二、Google AI：AI Studio / Gemini API（地区支持与 Gemini 网页版不同）
+DOMAIN-SUFFIX,ai.google.dev
+DOMAIN-SUFFIX,aistudio.google.com
+DOMAIN-SUFFIX,generativelanguage.googleapis.com
+
+# Gemini Code Assist / Gemini CLI
+DOMAIN,cloudaicompanion.googleapis.com
+DOMAIN,cloudcode-pa.googleapis.com
+
+# Gemini / Bard
+DOMAIN-SUFFIX,bard.google.com
+DOMAIN-SUFFIX,gemini.google.com
+
+# NotebookLM
+DOMAIN-SUFFIX,notebooklm.google
+DOMAIN-SUFFIX,notebooklm.google.com
+
+# Google Labs / Flow / Whisk
+DOMAIN-SUFFIX,labs.google
+
+# 三、AI 编程工具：Cursor
+DOMAIN-SUFFIX,cursor.com
+DOMAIN-SUFFIX,cursorapi.com
+DOMAIN-SUFFIX,cursor.sh
+PROCESS-NAME,Cursor.exe
+PROCESS-NAME,Cursor
+PROCESS-NAME,cursor
+PROCESS-NAME,Cursor Helper.exe
+PROCESS-NAME,Cursor Helper
+PROCESS-NAME,cursor-helper
+DOMAIN-SUFFIX,cursor-cdn.com
+DOMAIN-SUFFIX,cursorvm.com
+DOMAIN,anysphere-binaries.s3.us-east-1.amazonaws.com
+
+# Windsurf / Codeium / Devin
+PROCESS-NAME,Windsurf.exe
+PROCESS-NAME,Windsurf
+PROCESS-NAME,windsurf
+PROCESS-NAME,Windsurf Helper.exe
+PROCESS-NAME,Windsurf Helper
+PROCESS-NAME,windsurf-helper
+DOMAIN-SUFFIX,windsurf.com
+DOMAIN-SUFFIX,codeium.com
+DOMAIN-SUFFIX,codeiumdata.com
+DOMAIN-SUFFIX,devin.ai
+DOMAIN-SUFFIX,devinenterprise.com
+
+# GitHub Copilot（登录 GitHub 的流量沿用其他规则）
+DOMAIN-SUFFIX,githubcopilot.com
+DOMAIN-SUFFIX,copilot-proxy.githubusercontent.com
+DOMAIN-SUFFIX,origin-tracker.githubusercontent.com
+DOMAIN,copilot-reports.github.com
+
+# Trae 国际版
+DOMAIN-SUFFIX,trae.ai
 PROCESS-NAME,Trae.exe
 PROCESS-NAME,Trae
 PROCESS-NAME,trae
@@ -62,3 +108,41 @@ PROCESS-NAME,trae-cli.exe
 PROCESS-NAME,trae-cli
 PROCESS-NAME,Trae CLI.exe
 PROCESS-NAME,Trae CLI
+
+# 四、其他常用对话 / 搜索 / API 服务（不代表均限制中国大陆或香港）
+
+# Microsoft Copilot
+DOMAIN-SUFFIX,copilot.microsoft.com
+
+# Perplexity
+DOMAIN-SUFFIX,perplexity.ai
+
+# Poe
+DOMAIN-SUFFIX,poe.com
+
+# OpenRouter
+DOMAIN-SUFFIX,openrouter.ai
+
+# Groq
+DOMAIN-SUFFIX,groq.com
+
+# xAI / Grok
+DOMAIN-SUFFIX,x.ai
+DOMAIN-SUFFIX,grok.com
+
+# Meta AI
+DOMAIN-SUFFIX,meta.ai
+
+# 五、常用图像 / 视频 / 音频生成（地区与功能支持以各服务为准）
+
+# Midjourney
+DOMAIN-SUFFIX,midjourney.com
+
+# Runway
+DOMAIN-SUFFIX,runwayml.com
+
+# Suno
+DOMAIN-SUFFIX,suno.com
+
+# ElevenLabs
+DOMAIN-SUFFIX,elevenlabs.io
