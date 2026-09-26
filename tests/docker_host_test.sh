@@ -50,6 +50,12 @@ config_conflict() {
     ! docker_tcp_tls && [[ ! -e $TLS_WORK/confirmation ]]
 }
 custom_exec() { CUSTOM_EXEC='/usr/bin/dockerd --debug'; ! docker_tcp_tls && [[ ! -e $TLS_WORK/confirmation ]]; }
+years_prompt() {
+    DOCKER_TLS_YEARS=''
+    read_input() { printf -v "$2" '%s' 5; }
+    expect_host docker.example.com && grep -qF '证书 5 年' "$TLS_WORK/confirmation"
+}
+years_invalid() { DOCKER_TLS_YEARS=2; ! docker_tcp_tls && [[ ! -e $TLS_WORK/confirmation ]]; }
 check 'ipinfo 优先并绕过代理' ipinfo_first
 check '查询失败使用备用服务' fallback_error
 check '无效响应使用备用服务' fallback_invalid
@@ -60,4 +66,6 @@ check '拒绝非法公网地址' invalid_public
 check '拒绝非法连接及绑定地址' invalid_explicit
 check '保留已有 daemon.json 冲突配置' config_conflict
 check '拒绝覆盖自定义启动参数' custom_exec
+check '交互选择五年有效期' years_prompt
+check '拒绝非预设有效期' years_invalid
 printf '%s checks passed\n' "$passed"

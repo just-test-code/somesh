@@ -5,8 +5,10 @@ fixture_setup() {
     export TLS_WORK
     trap 'rm -rf -- "$TLS_WORK"' EXIT
     mkdir -p "$TLS_WORK/etc/docker"
+    cd "$TLS_WORK" || return 1
     DOCKER_TLS_HOST=docker.example.com
     DOCKER_TLS_BIND=127.0.0.1
+    DOCKER_TLS_YEARS=${TEST_YEARS:-1}
 }
 require_systemd() { :; }
 apt_install() { :; }
@@ -51,7 +53,7 @@ as_root() {
             return 22 ;;
     esac
     # 只允许经过映射的文件操作，测试不调用任何真实系统管理命令。
-    case "$cmd" in test|install|mktemp|openssl|tee|chmod|rm|mv|cp|grep|sed|python3|tar) ;; *) echo "Unexpected command: $cmd" >&2; return 99 ;; esac
+    case "$cmd" in test|install|mktemp|openssl|tee|chmod|rm|mv|cp|grep|sed|python3|tar|cat) ;; *) echo "Unexpected command: $cmd" >&2; return 99 ;; esac
     for arg in "$@"; do
         [[ $arg == /etc/* ]] && arg="$TLS_WORK$arg"
         mapped+=("$arg")

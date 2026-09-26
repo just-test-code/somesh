@@ -49,6 +49,8 @@ batch_failure() {
 }
 libs_existing_links() {
     local calls=''
+    ALL_TOOLS=1
+    apt_update() { :; }
     apt_install() { [[ $1 != eza ]]; }
     apt-cache() { printf '  Candidate: (none)\n'; }
     as_user() { calls+="$1;"; [[ $1 == mkdir || $1 == test ]]; }

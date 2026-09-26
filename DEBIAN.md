@@ -25,7 +25,8 @@ bash /path/to/debian.sh --user alice set_init app_zsh
 不会创建用户或授予管理员权限。默认使用 `SUDO_USER`，否则使用当前用户。
 通过 `su -` 启动时不能可靠推断原用户，因此需要显式指定 `--user`。
 
-sudo 是可选工具，可由 root 执行以下命令安装；脚本不会修改 sudoers 或用户组：
+sudo 已放入“安装常用工具”，默认勾选；脚本不会修改 sudoers 或用户组。
+旧的单独安装命令仍可由 root 使用：
 
 ```bash
 bash /path/to/debian.sh install_sudo
@@ -41,9 +42,28 @@ bash debian.sh --user alice --ssh-key /path/to/id_ed25519.pub set_ssh
 ```
 
 命令可以批量执行；任一步失败即停止后续命令并返回非零状态。
-不带命令时使用数字菜单，失败后可以继续选择其他操作。
+不带命令时使用方向键菜单：上下键移动、回车执行，也支持数字后回车和 q 退出。
+菜单按基础安装、Docker、SSH、系统配置、维护操作分组排序，相关操作相邻。
+“常用脚本”父菜单包含“NQ脚本”，执行命令为：
+
+```bash
+bash <(curl -sL https://run.NodeQuality.com)
+```
+
+脚本以当前执行用户身份运行，交互输入连接到终端；完成后按任意键返回子菜单。
+子菜单支持上下键、数字选择及 q/“返回上级菜单”，返回后保留主菜单选中位置。
+日志在终端显示颜色（信息青色、成功绿色、警告黄色、错误红色）；
+重定向输出或设置 `NO_COLOR=1` 时日志为纯文本。
 需要输入时从 `/dev/tty` 读取；无终端则明确失败，不会把 EOF 当成菜单确认。
 虽然支持 `curl | bash` 的终端输入，建议先保存脚本再运行，便于审阅和复用参数。
+
+“安装常用工具”默认全部勾选，并显示每个软件包的中文用途说明：上下键移动，
+空格切换，a 全选、n 清空、回车安装、q 取消。仅安装选中的包及其 APT 依赖，
+只有选中 fd/bat 才创建对应短命令链接。非交互安装全部可用工具可使用：
+
+```bash
+bash debian.sh --all-tools set_libs
+```
 
 ## Debian 12/13 兼容策略
 
@@ -64,26 +84,31 @@ bash debian.sh --user alice --ssh-key /path/to/id_ed25519.pub set_ssh
 软件源应与系统发行版一致。脚本不会自动切换 APT 源或把 Debian 13 软件包装进 Debian 12。
 不同版本的工具功能可能不同；本脚本不保证仓库版与上游最新版完全一致。
 
-## SSH 的两步流程
+## SSH 密钥登录流程
 
-1. `set_ssh` 校验单行公钥，备份已有 authorized_keys 并追加，保留现有 SSH 认证策略。
-2. 保持原连接，在新连接中验证公钥登录，再运行 `harden_ssh` 并确认。
+1. 选择“配置 SSH 密钥登录”或执行 `set_ssh`，校验并追加公钥，保留其他密钥。
+2. 添加成功后，脚本会追问是否关闭密码登录。先保留原连接，在新连接中验证公钥登录，再回答 y。
+3. 回答 n、直接回车或无法读取确认时，只保留已添加的公钥，不改变密码登录策略。菜单不再提供独立的关闭密码登录项。
 
-`harden_ssh` 会备份 sshd_config，在开头写入可重复更新的管理块，执行语法与
+确认关闭后，脚本会备份 sshd_config，在开头写入可重复更新的管理块，执行语法与
 目标用户/来源地址的有效配置检查，再 reload ssh.service。失败会尝试恢复备份。
 全局配置不能覆盖所有 Match 情形，其他来源地址、Host 匹配和用户条件需要另行核查。
 自定义 AuthorizedKeysFile、AllowUsers、AuthenticationMethods 等也可能影响公钥登录。
-`--user root` 硬化时使用 `PermitRootLogin prohibit-password`。
+`--user root` 关闭密码登录时使用 `PermitRootLogin prohibit-password`。
 
 ## 与旧版的行为变化
 
 - 初始化只安装常用工具；升级需单独运行 `set_update` 并确认预览结果。
-- SSH 添加密钥不再直接关闭密码认证；不会覆盖其他公钥。
+- SSH 添加密钥后追问是否关闭密码认证，默认保持原策略；不会覆盖其他公钥。
 - 不再自动安装 Oh My Zsh 和远程主题；已有 .zshrc 会备份并保留，追加一次管理块。
 - 不再运行远程 server_cleanup.sh，也不执行 Docker prune 或模糊匹配删除内核。
 - 系统清理预览 apt autoremove，确认后删除软件包并清理下载缓存。
 - 日志清理仅移除超过 14 天的归档 journal，不清空活动日志、登录记录或 shell 历史。
-- swap 支持普通 ext4/XFS 场景；已有 swap、已有 /swapfile、磁盘空间不足和其他文件系统会分别处理。
+- swap 支持普通 ext4/XFS 场景；已有活动 swap 时跳过，不覆盖已有 /swapfile。
+  按 `/proc/meminfo` 的实际内存计算：不超过 2 GiB 取 2 倍，2–8 GiB 取等量，
+  超过 8 GiB 取一半；向上对齐 256 MiB，最低 512 MiB、最高 16 GiB。
+  同时预留至少 1 GiB 或当前磁盘可用空间的 10%（取较大值），空间不足时缩小 swap，
+  连最低大小都无法满足则停止。这是普通服务器策略，不包含休眠所需空间。
 - 修改主机名使用 hostnamectl；定制的 /etc/hosts 和云平台主机名设置需要同步维护。
 
 ## 验证
@@ -93,6 +118,9 @@ bash -n debian.sh
 bash tests/debian_test.sh
 bash tests/docker_host_test.sh
 bash tests/docker_tls_test.sh
+bash tests/swap_test.sh
+bash tests/ssh_test.sh
+python3 tests/menu_test.py
 ```
 
 回归测试通过 mock 检查权限分支、参数白名单、APT 失败传播、批量失败中断、
@@ -107,7 +135,7 @@ Debian 12/13 虚拟机上进行实际验证。ShellCheck 尚未运行。
 
 根据 [DPanel TCP TLS 文档](https://dpanel.cc/manual/system-env-tcp) 和
 [Docker TLS 文档](https://docs.docker.com/engine/security/protect-access/) 实现。
-先安装并启动 Docker，然后运行菜单第 13 项，或指定 DPanel 实际使用的连接地址：
+先安装并启动 Docker，然后选择菜单“开启 Docker TCP 双向 TLS”，或指定连接地址：
 
 ```bash
 # 自动查询服务器公网 IPv4，在启用前显示地址并确认。
@@ -118,6 +146,9 @@ bash debian.sh --docker-host docker.example.com docker_tcp_tls
 
 # 可选：仅监听主机的某个内网 IPv4；默认监听 0.0.0.0。
 bash debian.sh --docker-host 10.0.0.10 --docker-bind 10.0.0.10 docker_tcp_tls
+
+# 首次签发时选择五年；不传此选项时会询问 1 / 5 / 10 年，回车默认一年。
+bash debian.sh --docker-years 5 docker_tcp_tls
 ```
 
 省略 `--docker-host` 时，依次通过 HTTPS 查询 ipinfo.io/ip 和 api.ipify.org，
@@ -135,10 +166,12 @@ bash debian.sh --docker-host 10.0.0.10 --docker-bind 10.0.0.10 docker_tcp_tls
 - 监听端口为 **2376**，启用 `--tlsverify`，同时保留 `-H fd://` 的本地 socket。
 - 使用 `/etc/systemd/system/docker.service.d/90-somesh-tls.conf`，不修改发行版 unit。
 - 生成独立 CA、服务端证书和客户端证书；服务端 SAN 包含连接地址与 127.0.0.1。
-- CA 有效期 10 年，服务端和客户端证书有效期 365 天。
+- 服务端和客户端证书可选 1 / 5 / 10 年（按每年 365 天计算）。
+  CA 至少有效 10 年，并至少比新签发的客户端/服务端证书多一年。
 - 证书目录 `/etc/docker/tls/somesh` 为私有目录，私钥权限为 0600。
 - 重复执行会验证并复用证书；地址改变、证书损坏或将在 24 小时内过期时停止，
   不自动替换 CA，避免现有客户端突然失去访问权限。到期前需要规划证书轮换。
+  已有证书不会因重复执行而延长到期时间；显式选择不同年限时会停止并提示重新签发。
 - 修改前执行 dockerd 配置校验；重启后检查带证书访问成功、无证书访问失败。
   应用失败会恢复原 drop-in 并尝试重启；备份文件和已生成证书保留供诊断。
 
@@ -151,7 +184,11 @@ bash debian.sh --docker-host 10.0.0.10 --docker-bind 10.0.0.10 docker_tcp_tls
 | 客户端证书 | `/etc/docker/tls/somesh/cert.pem` |
 | 客户端私钥 | `/etc/docker/tls/somesh/key.pem` |
 
-同目录的 `dpanel-client.tar.gz` 只包含上述三个文件，仅 root 可读。
+默认导出到**执行命令时的当前工作目录**，文件名为 `dpanel-client.tar.gz`，
+不是固定放在证书目录或脚本文件所在目录。例如在 `/root/setup` 中执行
+`bash /opt/scripts/debian.sh docker_tcp_tls`，导出包就在 `/root/setup/dpanel-client.tar.gz`。
+包内只包含上述三个文件，权限为 0600，所有者为实际执行脚本的用户；
+再次成功运行时原子替换同名导出包。
 通过可信的 SSH/SFTP 通道取出；**不要上传 ca-key.pem 或 server-key.pem**。
 持有客户端私钥即可管理 Docker，通常等同于拥有宿主机 root 权限。
 脚本不修改防火墙或云安全组；请仅允许 DPanel 来源地址访问 TCP 2376。

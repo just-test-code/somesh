@@ -9,8 +9,8 @@ umask 077
 docker_tcp_tls
 work="$TLS_WORK/etc/docker/tls/somesh"
 drop="$TLS_WORK/etc/systemd/system/docker.service.d/90-somesh-tls.conf"
-[[ -f $work/dpanel-client.tar.gz && -f $drop ]]
-[[ $(tar -tzf "$work/dpanel-client.tar.gz" | sort) == $(printf 'ca.pem\ncert.pem\nkey.pem') ]]
+[[ -f $TLS_WORK/dpanel-client.tar.gz && -f $drop && ! -e $work/dpanel-client.tar.gz ]]
+[[ $(tar -tzf "$TLS_WORK/dpanel-client.tar.gz" | sort) == $(printf 'ca.pem\ncert.pem\nkey.pem') ]]
 grep -qF -- '--tlsverify' "$drop"
 grep -qF -- '-H fd://' "$drop"
 validated=$(cat "$TLS_WORK/validated")
@@ -19,9 +19,20 @@ checksum=$(sha256sum "$work/ca.pem" "$work/server-cert.pem" "$work/cert.pem")
 docker_tcp_tls
 [[ $(sha256sum "$work/ca.pem" "$work/server-cert.pem" "$work/cert.pem") == "$checksum" ]]
 printf 'PASS certificate reuse, client export and matching validation/service arguments\n'
-python3 - "$work" <<'PY'
+python3 - "$work" "$DOCKER_TLS_YEARS" <<'PY'
 import pathlib, socket, ssl, sys, threading
 p = pathlib.Path(sys.argv[1])
+years = int(sys.argv[2])
+dates = {}
+for name in ['ca.pem', 'server-cert.pem', 'cert.pem']:
+    decoded = ssl._ssl._test_decode_cert(str(p / name))
+    start = ssl.cert_time_to_seconds(decoded['notBefore'])
+    end = ssl.cert_time_to_seconds(decoded['notAfter'])
+    dates[name] = end
+    if name != 'ca.pem':
+        assert end - start == years * 365 * 86400, (name, end - start)
+assert dates['ca.pem'] > max(dates['server-cert.pem'], dates['cert.pem'])
+print(f'PASS actual {years}-year certificate dates and longer CA validity')
 server = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
 server.load_cert_chain(p / 'server-cert.pem', p / 'server-key.pem')
 server.load_verify_locations(p / 'ca.pem')
@@ -64,6 +75,7 @@ assert not t.is_alive() and results == [True, False, False], results
 if sys.platform != 'win32':
     for name in ['ca-key.pem', 'server-key.pem', 'key.pem']:
         assert (p / name).stat().st_mode & 0o777 == 0o600
+    assert pathlib.Path('dpanel-client.tar.gz').stat().st_mode & 0o777 == 0o600
 print('PASS actual mTLS: valid client accepted; no client certificate and wrong hostname rejected')
 PY
 
