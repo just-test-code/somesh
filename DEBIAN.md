@@ -1,6 +1,7 @@
 # Debian 服务器管理脚本
 
-支持 Debian 12（bookworm）和 Debian 13（trixie），需要 Bash。
+适配 Debian 10（buster）、11（bullseye）、12（bookworm）和 13（trixie），需要 Bash。
+按软件源与服务实际能力选择实现；适配代码不等同于已完成所有版本的实机验证。
 
 脚本按功能组织：每个菜单功能集中在一个函数中；只有日志、权限、输入确认、
 APT 和命令分发等多处复用的逻辑保留为公共函数。`set_init` 是 `set_libs` 的命令别名。
@@ -65,23 +66,25 @@ bash <(curl -sL https://run.NodeQuality.com)
 bash debian.sh --all-tools set_libs
 ```
 
-## Debian 12/13 兼容策略
+## Debian 10–13 兼容策略
 
 | 项目 | 策略 |
 | --- | --- |
-| 系统检测 | 读取 `/etc/os-release`，仅接受 Debian 12/13 |
+| 系统检测 | 读取 `/etc/os-release`，接受 Debian 10/11/12/13 |
 | 权限 | root 直接执行；普通用户使用 sudo；缺少权限时给出 `su -` 指引 |
 | 软件安装 | 使用 apt-get；一次运行复用成功的索引刷新；失败停止 |
-| zoxide | 使用两个发行版各自的软件仓库版本，不执行在线安装脚本 |
-| eza | 检查实际候选包；Debian 13 标准源可安装，Debian 12 缺包时提示并跳过；不添加跨版本源 |
+| zoxide | 有候选包时使用当前发行版仓库；旧版缺包则提示跳过，不执行在线安装脚本 |
+| eza | 常用工具全部逐项检查候选包，缺包只跳过对应工具；不添加跨版本源 |
 | fd/bat | 安装 fd-find/bat，给目标用户建立 fd/bat 链接；已有文件保留 |
-| NTP | 保留已运行或已安装的 chrony、ntpsec、systemd-timesyncd；都不存在才安装 timesyncd |
+| NTP | 保留 chrony、ntpsec、ntp、openntpd、timesyncd；均不存在时优先安装 timesyncd，缺包时使用 chrony |
 | SSH | 使用 ssh.service 和 sshd -t；不再写入 Protocol/RSAAuthentication 旧配置项 |
 | Docker | 使用 Debian 的 docker.io；检测到 Docker CE 等冲突安装时停止 |
 | ZSH | 使用 Debian 的 zsh-autosuggestions、zsh-syntax-highlighting；配置目标用户的 shell |
 | 服务环境 | 检查 systemd 正在运行；普通容器仅支持不依赖服务的功能 |
 
-软件源应与系统发行版一致。脚本不会自动切换 APT 源或把 Debian 13 软件包装进 Debian 12。
+软件源应与系统发行版一致。脚本不会自动切换 APT 源或跨发行版安装软件包。
+旧版本的软件源可能已归档；APT 更新失败时会停止并提示检查源，不会自动关闭签名验证。
+常用工具菜单内的可选包缺失可跳过；SSH、Docker 等功能的关键依赖安装失败仍会停止。
 不同版本的工具功能可能不同；本脚本不保证仓库版与上游最新版完全一致。
 
 ## SSH 密钥登录流程
@@ -127,9 +130,9 @@ python3 tests/menu_test.py
 可选包缺失、链接保护、时间服务选择、主机名和公钥输入校验，不会安装软件或修改系统。
 基础测试在 Linux root/普通用户环境运行；TLS 测试在 Git Bash 中生成真实证书并验证
 本地握手，Docker/systemd 和系统路径使用沙箱模拟，覆盖证书复用与配置回滚。
-Debian 12/13 容器集成验证因
+Debian 10–13 容器集成验证因
 当前环境无法访问镜像仓库而未完成；SSH reload、APT 安装和 swap 仍需在一次性
-Debian 12/13 虚拟机上进行实际验证。ShellCheck 尚未运行。
+Debian 10–13 虚拟机上进行实际验证。ShellCheck 尚未运行。
 
 ## Docker TCP 双向 TLS（DPanel）
 
@@ -160,8 +163,10 @@ bash debian.sh --docker-years 5 docker_tcp_tls
 
 该操作会预告并确认 Docker 重启，可能短暂影响现有容器。需要正在运行的
 系统级 docker.service，支持标准 Debian docker.io / Docker CE 的 systemd
-启动参数；自定义 ExecStart 或 daemon.json 中已有 hosts/TLS 配置时停止，
-避免丢失原有参数或制造重复配置。IPv6 和多域名 SAN 暂不支持。
+启动参数，包括旧版 `-H fd:// $DOCKER_OPTS`，保留环境变量展开；自定义 ExecStart 或 daemon.json 中已有 hosts/TLS 配置时停止，
+避免丢失原有参数或制造重复配置。离线校验覆盖显式参数，旧版 `$DOCKER_OPTS`
+的最终展开由重启和 TLS 探测验证，失败会恢复配置。IPv6 和多域名 SAN 暂不支持。
+旧版 unit 依据 [Debian 10 Docker 源码](https://sources.debian.org/src/docker.io/18.09.1%2Bdfsg1-7.1%2Bdeb10u3/engine/contrib/init/systemd/docker.service/)。
 
 - 监听端口为 **2376**，启用 `--tlsverify`，同时保留 `-H fd://` 的本地 socket。
 - 使用 `/etc/systemd/system/docker.service.d/90-somesh-tls.conf`，不修改发行版 unit。
@@ -203,4 +208,4 @@ docker --tlsverify --tlscacert=ca.pem --tlscert=cert.pem --tlskey=key.pem \
 TLS 测试：`bash tests/docker_tls_test.sh`（需要 Python 3 和 OpenSSL）。
 测试实际生成证书并建立本地 TLS 连接，验证正常客户端、缺少客户端证书、错误域名
 以及私钥不匹配的情况。Windows 下不检查 POSIX 文件权限。
-实际 Docker/systemd 重启与故障恢复仍需要在 Debian 12/13 测试机验证。
+实际 Docker/systemd 重启与故障恢复仍需要在 Debian 10–13 测试机验证。

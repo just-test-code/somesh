@@ -35,6 +35,7 @@ as_root() {
             case "$1" in
                 show)
                     local start='/usr/bin/dockerd -H fd:// --containerd=/run/containerd/containerd.sock'
+                    [[ ${TEST_DOCKER_LEGACY:-0} != 1 ]] || start='/usr/bin/dockerd -H fd:// $DOCKER_OPTS'
                     local drop="$TLS_WORK/etc/systemd/system/docker.service.d/90-somesh-tls.conf"
                     if [[ -f $drop ]]; then start=$(sed -n 's/^ExecStart=\(.\+\)$/\1/p' "$drop"); fi
                     printf '{ path=/usr/bin/dockerd ; argv[]=%s ; }\n' "${CUSTOM_EXEC:-$start}" ;;

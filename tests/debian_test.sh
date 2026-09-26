@@ -20,7 +20,7 @@ args_valid() {
     app_zsh() { :; }
     main --user demo --timezone Asia/Singapore set_init app_zsh
 }
-version_13() { TEST_VERSION=13; set_libs() { :; }; main set_libs; }
+versions_supported() { set_libs() { :; }; for TEST_VERSION in 10 11 12 13; do main set_libs || return 1; done; }
 version_rejected() { TEST_VERSION=14; ! main set_libs; }
 args_invalid() { ! main 'echo injected'; }
 args_missing() { ! main --user; }
@@ -52,7 +52,9 @@ libs_existing_links() {
     ALL_TOOLS=1
     apt_update() { :; }
     apt_install() { [[ $1 != eza ]]; }
-    apt-cache() { printf '  Candidate: (none)\n'; }
+    apt-cache() {
+        case "$2" in eza|zoxide) printf '  Candidate: (none)\n' ;; *) printf '  Candidate: 1.0\n' ;; esac
+    }
     as_user() { calls+="$1;"; [[ $1 == mkdir || $1 == test ]]; }
     set_libs && [[ $calls != *ln* ]]
 }
@@ -69,8 +71,29 @@ ssh_invalid() {
     read_input() { printf -v "$2" '%s' 'not-a-key'; }
     ! set_ssh
 }
+ntp_legacy() {
+    local calls=''; TIMEZONE=UTC
+    require_systemd() { :; }
+    systemctl() { [[ $1 == is-active && $3 == ntp.service ]]; }
+    apt_install() { return 99; }; as_root() { calls+="$*;"; }; timedatectl() { :; }
+    set_ntp && [[ $calls == *'enable --now ntp.service'* ]]
+}
+ntp_fallback() {
+    local calls='' observed_package=''; TIMEZONE=UTC
+    require_systemd() { :; }; systemctl() { return 1; }; apt_update() { :; }
+    package_available() { return 1; }
+    apt_install() { observed_package=$1; }; as_root() { calls+="$*;"; }; timedatectl() { :; }
+    set_ntp && [[ $observed_package == chrony && $calls == *'enable --now chrony.service'* ]]
+}
+libs_unavailable() {
+    local installed=''; ALL_TOOLS=1
+    apt_update() { :; }
+    package_available() { [[ $1 != zoxide && $1 != eza && $1 != fd-find && $1 != bat ]]; }
+    apt_install() { installed=" $* "; }; as_user() { return 99; }
+    set_libs && [[ $installed == *' sudo '* && $installed != *' zoxide '* && $installed != *' fd-find '* ]]
+}
 check '参数与旧命令别名' args_valid
-check '接受 Debian 13' version_13
+check '接受 Debian 10/11/12/13' versions_supported
 check '拒绝其他发行版版本' version_rejected
 check '拒绝任意命令执行' args_invalid
 check '拒绝缺失参数值' args_missing
@@ -84,5 +107,8 @@ check '保留已有链接且 eza 可选' libs_existing_links
 check '拒绝非法主机名' hostname_invalid
 check '保留正在运行的 chrony' ntp_preserves_chrony
 check '拒绝无效公钥' ssh_invalid
+check '保留旧版 ntp 服务' ntp_legacy
+check '独立 timesyncd 包缺失时使用 chrony' ntp_fallback
+check '旧版缺包逐项跳过且不创建无效链接' libs_unavailable
 printf '\n%d passed, %d failed\n' "$passed" "$failed"
 ((failed == 0))

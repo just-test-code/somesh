@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Debian 12/13 服务器管理工具。系统操作通过 as_root，用户文件通过 as_user。
+# Debian 10–13 服务器管理工具。系统操作通过 as_root，用户文件通过 as_user。
 # 不使用 set -e：菜单需要处理失败并继续；每个关键步骤显式检查返回值。
 set -o pipefail
 
@@ -72,9 +72,18 @@ require_systemd() {
 
 apt_update() {
     if ((APT_UPDATED == 0)); then
-        as_root apt-get update || return 1
+        if ! as_root apt-get update; then
+            log ERROR 'APT 索引更新失败，请检查网络和当前发行版的软件源。旧版本可能需要 Debian 归档源；脚本不会自动换源。'
+            return 1
+        fi
         APT_UPDATED=1
     fi
+}
+
+package_available() {
+    local candidate
+    candidate=$(LC_ALL=C apt-cache policy "$1" | awk '/Candidate:/ {print $2; exit}') || return 1
+    [[ -n $candidate && $candidate != '(none)' ]]
 }
 
 apt_install() {
@@ -90,8 +99,8 @@ set_libs() {
         '解压 ZIP 文件' '创建 ZIP 压缩包' '查看与处理 JSON 数据' '终端上传下载文件（rz/sz）'
         '终端会话保持与分屏' '编程字体（本机终端显示）' '快速查找文件（fd）' '快速搜索文本（rg）'
         '带语法高亮查看文件（bat）' '验证签名、管理加密密钥' '代码版本管理与仓库下载'
-        '按使用习惯快速跳转目录' '彩色文件列表（Debian 12 源可能无此包）')
-    local selected=() packages=() current=0 key sequence mark pointer i candidate pair package source name dest
+        '按使用习惯快速跳转目录' '彩色文件列表（旧版源可能无此包）')
+    local selected=() packages=() available=() current=0 key sequence mark pointer i pair package source name dest
     for i in "${!names[@]}"; do selected[i]=1; done
     if (( ! ALL_TOOLS )); then
         while true; do
@@ -124,13 +133,11 @@ set_libs() {
     for i in "${!names[@]}"; do ((selected[i])) && packages+=("${names[i]}"); done
     if ((${#packages[@]} == 0)); then log INFO '未选择任何工具'; return 0; fi
     apt_update || return 1
-    if [[ ${packages[-1]} == eza ]]; then
-        candidate=$(LC_ALL=C apt-cache policy eza | awk '/Candidate:/ {print $2; exit}') || return 1
-        if [[ -z $candidate || $candidate == '(none)' ]]; then
-            unset 'packages[-1]'
-            log WARN '当前软件源没有 eza，已跳过；其他选项保持不变。'
-        fi
-    fi
+    for package in "${packages[@]}"; do
+        if package_available "$package"; then available+=("$package")
+        else log WARN "当前软件源没有 $package，已跳过此可选工具。"; fi
+    done
+    packages=("${available[@]}")
     ((${#packages[@]})) || { log WARN '所选工具没有可安装的软件包'; return 1; }
     log INFO "将安装：${packages[*]}"
     apt_install "${packages[@]}" || return 1
@@ -242,7 +249,7 @@ set_ssh() {
     as_root cp -a /etc/ssh/sshd_config "$backup" || { rm -f "$temp"; return 1; }
     # 放在文件首部，使全局值先于 Include；保留其他内容和 Match 段。
     {
-        printf '# BEGIN somesh authentication\nPubkeyAuthentication yes\nPasswordAuthentication no\nKbdInteractiveAuthentication no\n'
+        printf '# BEGIN somesh authentication\nPubkeyAuthentication yes\nPasswordAuthentication no\nKbdInteractiveAuthentication no\nChallengeResponseAuthentication no\n'
         if [[ $TARGET_USER == root ]]; then printf 'PermitRootLogin prohibit-password\n'; fi
         printf '# END somesh authentication\n'
         as_root sed '/^# BEGIN somesh authentication$/,/^# END somesh authentication$/d' /etc/ssh/sshd_config
@@ -256,7 +263,8 @@ set_ssh() {
     if as_root /usr/sbin/sshd -t && effective=$(as_root /usr/sbin/sshd -T -C "$context") &&
        grep -qx 'pubkeyauthentication yes' <<< "$effective" &&
        grep -qx 'passwordauthentication no' <<< "$effective" &&
-       grep -qx 'kbdinteractiveauthentication no' <<< "$effective"; then
+       grep -qx 'kbdinteractiveauthentication no' <<< "$effective" &&
+       ! grep -qx 'challengeresponseauthentication yes' <<< "$effective"; then
         if as_root systemctl reload ssh.service; then
             log INFO "SSH 配置已生效；备份：$backup"
             log WARN '已验证当前用户/来源地址，其他 Match 条件需单独检查。请再次验证新连接。'
@@ -276,7 +284,7 @@ set_ntp() {
         log ERROR "无效时区：$TIMEZONE"; return 1;
     }
     # 优先沿用正在运行的提供者，其次沿用已安装的提供者。
-    for unit in chrony.service ntpsec.service systemd-timesyncd.service; do
+    for unit in chrony.service ntpsec.service ntp.service openntpd.service systemd-timesyncd.service; do
         if systemctl is-active --quiet "$unit"; then selected=$unit; break; fi
         if [[ -z $installed && $(systemctl show -p LoadState --value "$unit" 2>/dev/null) == loaded ]]; then
             installed=$unit
@@ -284,8 +292,14 @@ set_ntp() {
     done
     selected=${selected:-$installed}
     if [[ -z $selected ]]; then
-        apt_install systemd-timesyncd || return 1
-        selected=systemd-timesyncd.service
+        apt_update || return 1
+        if package_available systemd-timesyncd; then
+            apt_install systemd-timesyncd || return 1
+            selected=systemd-timesyncd.service
+        else
+            apt_install chrony || return 1
+            selected=chrony.service
+        fi
     fi
     as_root timedatectl set-timezone "$TIMEZONE" || return 1
     as_root systemctl enable --now "$selected" || return 1
@@ -337,7 +351,7 @@ docker_tcp_tls() (
     local certdir=/etc/docker/tls/somesh drop=/etc/systemd/system/docker.service.d/90-somesh-tls.conf
     local stage='' candidate='' backup='' export_tmp='' changed=0 had_drop=0 committed=0
     local export_path="$PWD/dpanel-client.tar.gz"
-    local bin current original san probe endpoint address dir kind=host
+    local bin current original san probe endpoint address dir kind=host service_extra=''
     local role key cert purpose public_cert public_key
     local years=$DOCKER_TLS_YEARS days ca_days existing_years=1
     local daemon_args=() curl_args=()
@@ -417,6 +431,10 @@ PY
             log ERROR '目标 drop-in 已存在且不是本脚本管理的文件'; return 1;
         }
         original=$(as_root sed -n 's/^ExecStart=\(.\+\)$/\1/p' "$drop") || return 1
+    else
+        case "$current" in
+            "$bin -H fd://"|"$bin -H fd:// \$DOCKER_OPTS") original=$current ;;
+        esac
     fi
     [[ $current == "$original" ]] || {
         log ERROR '检测到自定义 Docker 启动参数，请先手动整合；脚本不会覆盖它们。'; return 1;
@@ -510,13 +528,16 @@ PY
         stage=''
     fi
     # 一份参数同时用于离线校验与 systemd，避免两处配置漂移。
-    daemon_args=(-H fd:// -H "tcp://$DOCKER_TLS_BIND:2376"
-        --containerd=/run/containerd/containerd.sock --tlsverify
+    daemon_args=(-H fd:// -H "tcp://$DOCKER_TLS_BIND:2376")
+    [[ $original != *'--containerd=/run/containerd/containerd.sock'* ]] || daemon_args+=(--containerd=/run/containerd/containerd.sock)
+    # Debian 10 的标准 unit 使用 $DOCKER_OPTS；保留其运行时展开，出错仍回滚。
+    [[ $original != *'$DOCKER_OPTS'* ]] || service_extra=' $DOCKER_OPTS'
+    daemon_args+=(--tlsverify
         "--tlscacert=$certdir/ca.pem" "--tlscert=$certdir/server-cert.pem" "--tlskey=$certdir/server-key.pem")
     as_root "$bin" --validate "${daemon_args[@]}" || return 1
     candidate=$(mktemp) || return 1
-    printf '# Managed by somesh Docker TLS\n[Service]\nExecStart=\nExecStart=%s %s\n' \
-        "$bin" "${daemon_args[*]}" > "$candidate" || return 1
+    printf '# Managed by somesh Docker TLS\n[Service]\nExecStart=\nExecStart=%s %s%s\n' \
+        "$bin" "${daemon_args[*]}" "$service_extra" > "$candidate" || return 1
     as_root install -d -m 755 /etc/systemd/system/docker.service.d || return 1
     if ((had_drop)); then
         backup="$drop.bak.$(date +%Y%m%d-%H%M%S).$$"
@@ -656,8 +677,8 @@ HELP
     # shellcheck disable=SC1091
     . /etc/os-release
     case "${ID:-}:${VERSION_ID:-}" in
-        debian:12|debian:13) log INFO "系统：Debian $VERSION_ID (${VERSION_CODENAME:-unknown})" ;;
-        *) log ERROR '仅支持 Debian 12 和 Debian 13'; return 1 ;;
+        debian:10|debian:11|debian:12|debian:13) log INFO "系统：Debian $VERSION_ID (${VERSION_CODENAME:-unknown})" ;;
+        *) log ERROR '支持范围为 Debian 10、11、12、13'; return 1 ;;
     esac
     has apt-get || { log ERROR '找不到 apt-get'; return 1; }
     if ((EUID != 0)); then

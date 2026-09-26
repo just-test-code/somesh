@@ -14,7 +14,9 @@ drop="$TLS_WORK/etc/systemd/system/docker.service.d/90-somesh-tls.conf"
 grep -qF -- '--tlsverify' "$drop"
 grep -qF -- '-H fd://' "$drop"
 validated=$(cat "$TLS_WORK/validated")
-[[ $(sed -n 's/^ExecStart=\(.\+\)$/\1/p' "$drop") == "/usr/bin/dockerd ${validated#--validate }" ]]
+expected="/usr/bin/dockerd ${validated#--validate }"
+[[ ${TEST_DOCKER_LEGACY:-0} != 1 ]] || expected+=' $DOCKER_OPTS'
+[[ $(sed -n 's/^ExecStart=\(.\+\)$/\1/p' "$drop") == "$expected" ]]
 checksum=$(sha256sum "$work/ca.pem" "$work/server-cert.pem" "$work/cert.pem")
 docker_tcp_tls
 [[ $(sha256sum "$work/ca.pem" "$work/server-cert.pem" "$work/cert.pem") == "$checksum" ]]
